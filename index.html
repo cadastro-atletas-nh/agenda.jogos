@@ -831,7 +831,87 @@
             return membros.filter(m => m.nome && m.nome.length > 2);
         }
 
-        // --- MANIFESTO DE VIAGEM ---
+        // --- GERAÇÃO DE PDF DE CONVOCAÇÕES (PÁGINA ÚNICA, ATLETAS, ORDEM ALFABÉTICA & ORIENTAÇÕES EM DESTAQUE) ---
+        function gerarPdfConvocacao(jogoId) {
+            const jogo = db.jogos.find(j => j.id === jogoId);
+            if (!jogo) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const nomeClube = db.config.nomeClube || 'Clube';
+
+            doc.setFontSize(14);
+            doc.text(`CONVOCAÇÃO OFICIAL - MATCH DAY`, 14, 14);
+            doc.setFontSize(10);
+            doc.text(`${nomeClube} | Competição: ${jogo.campeonato} (${jogo.categoria})`, 14, 20);
+
+            doc.setFontSize(9);
+            doc.setDrawColor(200);
+            doc.setFillColor(245, 245, 245);
+            doc.roundedRect(14, 23, 182, 32, 2, 2, 'FD');
+
+            const dataFmt = jogo.data ? jogo.data.split('-').reverse().join('/') : 'N/I';
+            doc.text(`Confronto: ${jogo.mandante} x ${jogo.visitante}`, 18, 29);
+            doc.text(`Data/Hora: ${dataFmt} às ${jogo.hora}`, 18, 35);
+            doc.text(`Local do Jogo: ${jogo.local}`, 18, 41);
+            doc.text(`Apresentação: ${jogo.horaApresentacao || 'N/I'} em ${jogo.localApresentacao || 'N/I'} | Saída: ${jogo.saida || 'N/I'}`, 18, 47);
+
+            let startYTable = 58;
+
+            if (jogo.orientacoes) {
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(8);
+                const splitText = doc.splitTextToSize(jogo.orientacoes, 174);
+                const boxHeight = 8 + (splitText.length * 3.5);
+                
+                doc.setDrawColor(245, 158, 11); 
+                doc.setFillColor(254, 252, 232); 
+                doc.roundedRect(14, 57, 182, boxHeight, 2, 2, 'FD');
+                
+                doc.setTextColor(180, 83, 9); 
+                doc.text("ORIENTAÇÕES GERAIS / OBSERVAÇÕES:", 18, 62);
+                
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(50, 50, 50);
+                doc.text(splitText, 18, 67);
+                
+                startYTable = 57 + boxHeight + 4;
+            }
+
+            // Filtro: Apenas atletas (sem diretoria ou comissão) e ordenados alfabeticamente
+            const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : db.atletas.map(a => a.id);
+            let atletasConvidados = db.atletas.filter(a => passageirosIds.includes(a.id) && (a.funcao || 'Atleta') === 'Atleta');
+            
+            atletasConvidados.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+
+            const tableData = atletasConvidados.map((p, index) => [
+                index + 1,
+                p.nome,
+                p.categoria || '',
+                p.doc || 'Não informado',
+                p.telefone || ''
+            ]);
+
+            doc.autoTable({
+                startY: startYTable,
+                head: [['#', 'Nome Completo do Atleta', 'Categoria', 'CPF / RG', 'WhatsApp / Contato']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [249, 115, 22] },
+                styles: { fontSize: 8, cellPadding: 2 },
+                margin: { left: 14, right: 14 }
+            });
+
+            const finalY = doc.lastAutoTable.finalY + 8;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Total de Atletas Convocados: ${atletasConvidados.length}`, 14, finalY);
+
+            doc.save(`convocacao_${jogo.data}_${jogo.mandante}_vs_${jogo.visitante}.pdf`);
+        }
+
+        // --- MANIFESTO DE VIAGEM (PÁGINA ÚNICA) ---
         let jogoAtualManifestoId = null;
         function abrirModalManifesto(jogoId) {
             jogoAtualManifestoId = jogoId;
@@ -898,27 +978,27 @@
             const doc = new jsPDF();
             const nomeClube = db.config.nomeClube || 'Clube';
 
-            doc.setFontSize(16);
-            doc.text(`MANIFESTO DE TRANSPORTE E VIAGEM`, 14, 18);
-            doc.setFontSize(11);
-            doc.text(`${nomeClube} | Jogo: ${jogo.mandante} x ${jogo.visitante} (${jogo.campeonato} - ${jogo.categoria})`, 14, 25);
-
+            doc.setFontSize(14);
+            doc.text(`MANIFESTO DE TRANSPORTE E VIAGEM`, 14, 14);
             doc.setFontSize(10);
+            doc.text(`${nomeClube} | Jogo: ${jogo.mandante} x ${jogo.visitante} (${jogo.campeonato} - ${jogo.categoria})`, 14, 20);
+
+            doc.setFontSize(9);
             doc.setDrawColor(200);
             doc.setFillColor(245, 245, 245);
-            doc.roundedRect(14, 30, 182, 36, 3, 3, 'FD');
+            doc.roundedRect(14, 23, 182, 28, 2, 2, 'FD');
 
             const dataSaidaFmt = man.saida ? man.saida.replace('T', ' às ') : 'N/I';
             const dataRetornoFmt = man.retorno ? man.retorno.replace('T', ' às ') : 'N/I';
 
-            doc.text(`Origem: ${man.origem}`, 18, 38);
-            doc.text(`Destino: ${man.destino}`, 18, 45);
-            doc.text(`Saída: ${dataSaidaFmt}`, 18, 52);
-            doc.text(`Retorno: ${dataRetornoFmt}`, 18, 59);
+            doc.text(`Origem: ${man.origem}`, 18, 29);
+            doc.text(`Destino: ${man.destino}`, 18, 35);
+            doc.text(`Saída: ${dataSaidaFmt}`, 18, 41);
+            doc.text(`Retorno: ${dataRetornoFmt}`, 18, 47);
 
-            doc.text(`Placa do Veículo: ${man.placa} (Ano: ${man.ano || 'N/I'})`, 110, 38);
-            doc.text(`Capacidade (Lugares): ${man.lugares}`, 110, 45);
-            doc.text(`Quilometragem Rodada: ${man.km}`, 110, 52);
+            doc.text(`Placa: ${man.placa} (Ano: ${man.ano || 'N/I'})`, 110, 29);
+            doc.text(`Lugares: ${man.lugares}`, 110, 35);
+            doc.text(`KM: ${man.km}`, 110, 41);
 
             // Passageiros cadastrados e ordenados alfabeticamente
             const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : db.atletas.map(a => a.id);
@@ -944,17 +1024,21 @@
             }
 
             doc.autoTable({
-                startY: 72,
+                startY: 54,
                 head: [['#', 'Nome Completo', 'Função', 'CPF / RG']],
                 body: tableData,
                 theme: 'grid',
                 headStyles: { fillColor: [249, 115, 22] },
-                styles: { fontSize: 9, minCellHeight: 8 }
+                styles: { fontSize: 8, cellPadding: 2 },
+                margin: { left: 14, right: 14 }
             });
 
-            const finalY = doc.lastAutoTable.finalY + 12;
+            const finalY = doc.lastAutoTable.finalY + 8;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            doc.setTextColor(0, 0, 0);
             doc.text(`Total de Passageiros Cadastrados: ${passageiros.length}`, 14, finalY);
-            doc.text(`Assinatura do Responsável / Motorista: ____________________________________`, 14, finalY + 12);
+            doc.text(`Assinatura do Responsável / Motorista: ____________________________________`, 14, finalY + 8);
 
             doc.save(`manifesto_viagem_${jogo.data}_${jogo.mandante}_vs_${jogo.visitante}.pdf`);
         }
@@ -1077,7 +1161,6 @@
 
             const container = document.getElementById('conteudo-presenca');
             
-            // Ordenação alfabética dos membros na lista de check-in
             const atletasList = [...db.atletas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 
             if (atletasList.length === 0) {
@@ -1129,14 +1212,12 @@
                 jogo.presencas.push(atletaId);
             }
 
-            // Salva a posição atual da barra de rolagem antes de atualizar a tela
             const scrollEl = document.getElementById('lista-presenca-scroll');
             const scrollPos = scrollEl ? scrollEl.scrollTop : 0;
 
             salvarDados();
             abrirModalPresenca(jogoAtualPresencaId);
 
-            // Restaura a posição da barra de rolagem instantaneamente
             const newScrollEl = document.getElementById('lista-presenca-scroll');
             if (newScrollEl) {
                 newScrollEl.scrollTop = scrollPos;
@@ -1569,7 +1650,7 @@
                 return true;
             });
 
-            // Jogos - Cartões Match Day com Manifesto e Check-in
+            // Jogos - Cartões Match Day com Convocações PDF, Manifesto e Check-in
             document.getElementById('lista-jogos').innerHTML = jogosFiltrados.map(j => {
                 const totalPresencas = (j.presencas || []).length;
                 return `
@@ -1606,19 +1687,19 @@
                                 <p class="flex items-center gap-2"><i class="custom-text fa-solid fa-location-dot w-4"></i> ${j.local}</p>
                             </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-                                <div class="flex items-center justify-between text-xs bg-zinc-950 p-2.5 rounded-xl border border-zinc-800">
-                                    <span class="text-zinc-400 flex items-center gap-1.5"><i class="fa-solid fa-clipboard-user custom-text"></i> Presença:</span>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
+                                <div class="flex items-center justify-between sm:justify-center gap-2 text-xs bg-zinc-950 p-2.5 rounded-xl border border-zinc-800">
+                                    <span class="text-zinc-400"><i class="fa-solid fa-clipboard-user custom-text"></i></span>
                                     <button onclick="abrirModalPresenca(${j.id})" class="font-bold text-white bg-zinc-800 hover:bg-zinc-700 px-2.5 py-1 rounded-lg transition border border-zinc-700">
-                                        <span class="custom-text">${totalPresencas}</span> Confirmados
+                                        <span class="custom-text">${totalPresencas}</span> Conf.
                                     </button>
                                 </div>
-                                <div class="flex items-center justify-between text-xs bg-zinc-950 p-2.5 rounded-xl border border-zinc-800">
-                                    <span class="text-zinc-400 flex items-center gap-1.5"><i class="fa-solid fa-bus custom-text"></i> Transporte:</span>
-                                    <button onclick="abrirModalManifesto(${j.id})" class="font-bold text-white bg-zinc-800 hover:bg-zinc-700 px-3 py-1 rounded-lg transition border border-zinc-700 flex items-center gap-1">
-                                        <i class="fa-solid fa-file-pdf custom-text"></i> Manifesto
-                                    </button>
-                                </div>
+                                <button onclick="gerarPdfConvocacao(${j.id})" class="font-bold text-white bg-zinc-950 hover:bg-zinc-800 px-3 py-2 rounded-xl transition border border-zinc-800 flex items-center justify-center gap-1.5 text-xs shadow">
+                                    <i class="fa-solid fa-file-pdf custom-text"></i> Convocações PDF
+                                </button>
+                                <button onclick="abrirModalManifesto(${j.id})" class="font-bold text-white bg-zinc-950 hover:bg-zinc-800 px-3 py-2 rounded-xl transition border border-zinc-800 flex items-center justify-center gap-1.5 text-xs shadow">
+                                    <i class="fa-solid fa-file-pdf custom-text"></i> Manifesto PDF
+                                </button>
                             </div>
 
                             ${j.orientacoes ? `
