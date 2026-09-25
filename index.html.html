@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Futebol - Cloud Sync (Match Day)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <!-- Bibliotecas para Exportação e Importação (jsPDF, SheetJS & PDF.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
+
+    <!-- Estilo Dinâmico para Cores Personalizadas -->
+    <style id="dynamic-theme">
+        .custom-bg { background-color: #f97316 !important; }
+        .custom-bg:hover { filter: brightness(0.9); }
+        .custom-text { color: #f97316 !important; }
+        .custom-border { border-color: #f97316 !important; }
+        .custom-badge { background-color: rgba(249, 115, 22, 0.15); border-color: rgba(249, 115, 22, 0.3); color: #fb923c; }
+        .custom-vs { background-color: rgba(249, 115, 22, 0.1); border-color: rgba(249, 115, 22, 0.3); color: #fb923c; }
+    </style>
+</head>
+<body class="bg-black text-zinc-100 font-sans min-h-screen flex flex-col justify-between">
+
+    <!-- TELA DE LOGIN / SEGURANÇA -->
+    <div id="login-screen" class="fixed inset-0 bg-zinc-950 flex items-center justify-center z-50 p-4">
+        <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-6">
+                <div class="custom-badge w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl border">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h2 id="login-titulo" class="text-xl font-bold text-white">Acesso Restrito</h2>
+                <p id="login-sub" class="text-xs text-zinc-400 mt-1">Digite sua senha para acessar o painel</p>
+            </div>
+            
+            <form onsubmit="autenticar(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Senha</label>
+                    <input type="password" id="input-senha" placeholder="Sua senha" class="w-full border border-zinc-700 rounded-lg p-3 bg-zinc-800 text-sm text-white focus:ring-2 focus:ring-orange-500 outline-none" required>
+                </div>
+                <button type="submit" id="btn-submit-auth" class="custom-bg w-full text-white font-medium p-3 rounded-lg text-sm shadow transition">Entrar</button>
+            </form>
+            <div id="login-erro" class="text-rose-400 text-xs text-center mt-3 hidden font-medium">Senha incorreta!</div>
+        </div>
+    </div>
+
+    <!-- APLICATIVO PRINCIPAL -->
+    <div id="app-screen" class="hidden flex-1 flex flex-col">
+        <!-- Cabeçalho -->
+        <header class="bg-zinc-950 border-b border-zinc-800 text-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col lg:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div id="header-logo-container">
+                        <div class="custom-bg w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg" id="header-logo-placeholder">
+                            NH
+                        </div>
+                    </div>
+                    <div>
+                        <h1 id="header-club-name" class="text-base font-bold flex items-center gap-2">
+                            Sociedade Esportiva Novo Horizonte
+                        </h1>
+                        <p class="text-[11px] text-zinc-400 font-medium">Painel Oficial de Gestão e Match Day</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 overflow-x-auto w-full lg:w-auto pb-2 lg:pb-0 justify-between lg:justify-end">
+                    <nav class="flex gap-2">
+                        <button onclick="switchTab('tab-jogos')" id="btn-jogos" class="tab-btn px-3 py-2 rounded-lg custom-bg font-medium text-xs whitespace-nowrap transition text-white">Jogos</button>
+                        <button onclick="switchTab('tab-clubes')" id="btn-clubes" class="tab-btn px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Clubes</button>
+                        <button onclick="switchTab('tab-categorias')" id="btn-categorias" class="tab-btn px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Categorias</button>
+                        <button onclick="switchTab('tab-campeonatos')" id="btn-campeonatos" class="tab-btn px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Campeonatos</button>
+                        <button onclick="switchTab('tab-estadios')" id="btn-estadios" class="tab-btn px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Estádios</button>
+                        <button onclick="switchTab('tab-elencos')" id="btn-elencos" class="tab-btn px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Elencos / Pessoas</button>
+                        <button onclick="switchTab('tab-config')" id="btn-config" class="tab-btn px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300"><i class="fa-solid fa-gear"></i> Configurações</button>
+                    </nav>
+
+                    <div class="flex items-center gap-1.5 border-l border-zinc-800 pl-3">
+                        <button onclick="exportarBackup()" title="Baixar cópia de segurança" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white px-2.5 py-2 rounded-lg text-xs transition flex items-center gap-1 border border-zinc-800">
+                            <i class="fa-solid fa-floppy-disk"></i> <span class="hidden sm:inline">Backup</span>
+                        </button>
+                        <button onclick="sair()" title="Bloquear Sistema" class="bg-zinc-900 hover:bg-rose-600 text-zinc-300 hover:text-white px-2.5 py-2 rounded-lg text-xs transition border border-zinc-800">
+                            <i class="fa-solid fa-lock"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 mt-6 flex-1 w-full pb-12">
+
+            <!-- ABA DE JOGOS -->
+            <section id="tab-jogos" class="tab-content">
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg mb-6">
+                    <h2 id="titulo-form-jogo" class="text-lg font-bold mb-4 text-white flex items-center gap-2">
+                        <i class="custom-text fa-solid fa-calendar-days"></i> Cadastrar Novo Jogo
+                    </h2>
+                    <form id="form-jogo" onsubmit="salvarJogo(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <input type="hidden" id="jogo-id">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Campeonato</label>
+                            <select id="jogo-camp" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Categoria</label>
+                            <select id="jogo-cat" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Estádio / Campo</label>
+                            <select id="jogo-estadio" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Time Mandante</label>
+                            <select id="jogo-mandante" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Time Visitante</label>
+                            <select id="jogo-visitante" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Data</label>
+                                <input type="date" id="jogo-data" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-xs text-white" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Hora do Jogo</label>
+                                <input type="time" id="jogo-hora" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-xs text-white" required>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Horário de Apresentação</label>
+                            <input type="time" id="jogo-hora-apresentacao" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Local de Apresentação</label>
+                            <input type="text" id="jogo-local-apresentacao" placeholder="Ex: Sede do Clube" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Saída da Viagem (Hora)</label>
+                            <input type="time" id="jogo-saida" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                        <div class="sm:col-span-2 md:col-span-3">
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Orientações Gerais / Observações do Jogo</label>
+                            <textarea id="jogo-orientacoes" rows="2" placeholder="Ex: Levar documento com foto, uniforme principal, etc." class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white"></textarea>
+                        </div>
+                        <div class="sm:col-span-2 md:col-span-3 flex justify-end gap-2">
+                            <button type="button" id="btn-cancelar-jogo" onclick="cancelarEdicaoJogo()" class="hidden bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition">Cancelar</button>
+                            <button type="submit" id="btn-salvar-jogo" class="custom-bg text-white font-medium px-6 py-2.5 rounded-lg text-sm shadow transition">Salvar Jogo</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg">
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="custom-text fa-solid fa-list"></i> Jogos Agendados (Match Day)
+                        </h2>
+                        <div class="flex flex-wrap gap-2 items-center w-full lg:w-auto">
+                            <select id="filtro-jogos-cat" onchange="atualizarInterface()" class="bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 rounded-xl px-3 py-2 flex-1 sm:flex-none">
+                                <option value="">Todas as Categorias</option>
+                            </select>
+                            <select id="filtro-jogos-periodo" onchange="atualizarInterface()" class="bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 rounded-xl px-3 py-2 flex-1 sm:flex-none">
+                                <option value="todos">Todos os Jogos</option>
+                                <option value="semana">Esta Semana (7 dias)</option>
+                                <option value="futuros">Próximos Jogos (A partir de hoje)</option>
+                            </select>
+                            <button onclick="abrirRelatorioJogos()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 transition shadow w-full sm:w-auto justify-center">
+                                <i class="custom-text fa-solid fa-file-lines"></i> Relatório Geral
+                            </button>
+                        </div>
+                    </div>
+                    <div id="lista-jogos" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+            </section>
+
+            <!-- ABA DE CLUBES -->
+            <section id="tab-clubes" class="tab-content hidden">
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg mb-6">
+                    <h2 id="titulo-form-clube" class="text-lg font-bold mb-4 text-white">Cadastrar Clube / Escudo</h2>
+                    <form id="form-clube" onsubmit="salvarClube(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                        <input type="hidden" id="clube-id">
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Nome do Clube</label>
+                            <input type="text" id="clube-nome" placeholder="Ex: S.E. Novo Horizonte" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Escudo (Logo)</label>
+                            <input type="file" id="clube-logo" accept="image/*" class="w-full text-xs text-zinc-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-300">
+                        </div>
+                        <div class="sm:col-span-3 flex justify-end gap-2">
+                            <button type="button" id="btn-cancelar-clube" onclick="cancelarEdicaoClube()" class="hidden bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-4 py-2 rounded-lg text-sm">Cancelar</button>
+                            <button type="submit" id="btn-salvar-clube" class="custom-bg text-white font-medium px-6 py-2 rounded-lg text-sm shadow">Salvar Clube</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-lg font-bold mb-4 text-white">Clubes Cadastrados</h2>
+                    <div id="lista-clubes" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+                </div>
+            </section>
+
+            <!-- ABA DE CATEGORIAS -->
+            <section id="tab-categorias" class="tab-content hidden">
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg mb-6">
+                    <h2 id="titulo-form-cat" class="text-lg font-bold mb-4 text-white">Cadastrar Categoria</h2>
+                    <form id="form-cat" onsubmit="salvarCategoria(event)" class="flex gap-4">
+                        <input type="hidden" id="cat-id">
+                        <input type="text" id="cat-nome" placeholder="Ex: Sub-17 A2" class="flex-1 border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        <button type="button" id="btn-cancelar-cat" onclick="cancelarEdicaoCategoria()" class="hidden bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-4 py-2.5 rounded-lg text-sm">Cancelar</button>
+                        <button type="submit" id="btn-salvar-cat" class="custom-bg text-white font-medium px-6 py-2.5 rounded-lg text-sm shadow">Adicionar</button>
+                    </form>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-lg font-bold mb-4 text-white">Categorias Cadastradas</h2>
+                    <ul id="lista-categorias" class="divide-y divide-zinc-800"></ul>
+                </div>
+            </section>
+
+            <!-- ABA DE CAMPEONATOS -->
+            <section id="tab-campeonatos" class="tab-content hidden">
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg mb-6">
+                    <h2 id="titulo-form-camp" class="text-lg font-bold mb-4 text-white">Cadastrar Campeonato</h2>
+                    <form id="form-camp" onsubmit="salvarCampeonato(event)" class="flex gap-4">
+                        <input type="hidden" id="camp-id">
+                        <input type="text" id="camp-nome" placeholder="Ex: Gauchão Sub-17 / Copa Regional" class="flex-1 border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        <button type="button" id="btn-cancelar-camp" onclick="cancelarEdicaoCampeonato()" class="hidden bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-4 py-2.5 rounded-lg text-sm">Cancelar</button>
+                        <button type="submit" id="btn-salvar-camp" class="custom-bg text-white font-medium px-6 py-2.5 rounded-lg text-sm shadow">Adicionar</button>
+                    </form>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-lg font-bold mb-4 text-white">Campeonatos Cadastrados</h2>
+                    <ul id="lista-campeonatos" class="divide-y divide-zinc-800"></ul>
+                </div>
+            </section>
+
+            <!-- ABA DE ESTÁDIOS -->
+            <section id="tab-estadios" class="tab-content hidden">
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg mb-6">
+                    <h2 id="titulo-form-est" class="text-lg font-bold mb-4 text-white">Cadastrar Estádio / Campo</h2>
+                    <form id="form-est" onsubmit="salvarEstadio(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <input type="hidden" id="est-id">
+                        <input type="text" id="est-nome" placeholder="Nome do Estádio (Ex: Estádio Municipal)" class="border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        <input type="text" id="est-cidade" placeholder="Cidade / Localização" class="border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        <div class="sm:col-span-2 flex justify-end gap-2">
+                            <button type="button" id="btn-cancelar-est" onclick="cancelarEdicaoEstadio()" class="hidden bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-4 py-2 rounded-lg text-sm">Cancelar</button>
+                            <button type="submit" id="btn-salvar-est" class="custom-bg text-white font-medium px-6 py-2 rounded-lg text-sm shadow">Salvar Estádio</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-lg font-bold mb-4 text-white">Estádios Cadastrados</h2>
+                    <div id="lista-estadios" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+                </div>
+            </section>
+
+            <!-- ABA DE ELENCOS E PESSOAS -->
+            <section id="tab-elencos" class="tab-content hidden">
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 id="titulo-form-atleta" class="text-lg font-bold text-white">Cadastrar Pessoa / Membro</h2>
+                        <p class="text-xs text-zinc-400 mt-0.5">Atletas, Diretoria, Comissão Técnica ou Diversos</p>
+                    </div>
+                    <button onclick="abrirModalImportarAtletas()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow">
+                        <i class="fa-solid fa-file-arrow-up"></i> Importar / Colar Pessoas
+                    </button>
+                </div>
+
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg mb-6">
+                    <form id="form-atleta" onsubmit="salvarAtleta(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <input type="hidden" id="atleta-id">
+                        <input type="text" id="atleta-nome" placeholder="Nome Completo" class="border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white sm:col-span-2" required>
+                        
+                        <select id="atleta-funcao" class="border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                            <option value="Atleta">Atleta</option>
+                            <option value="Comissão Técnica">Comissão Técnica</option>
+                            <option value="Diretoria">Diretoria</option>
+                            <option value="Diversos">Diversos</option>
+                        </select>
+
+                        <select id="atleta-cat" class="border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white"></select>
+                        
+                        <input type="text" id="atleta-doc" placeholder="CPF ou RG" class="border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white">
+                        <input type="text" id="atleta-tel" placeholder="WhatsApp" class="border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white sm:col-span-2 md:col-span-1" required>
+
+                        <div class="sm:col-span-2 md:col-span-3 lg:col-span-5 flex justify-end gap-2">
+                            <button type="button" id="btn-cancelar-atleta" onclick="cancelarEdicaoAtleta()" class="hidden bg-zinc-700 hover:bg-zinc-600 text-white font-medium px-4 py-2 rounded-lg text-sm">Cancelar</button>
+                            <button type="submit" id="btn-salvar-atleta" class="custom-bg text-white font-medium px-6 py-2 rounded-lg text-sm shadow">Salvar Cadastro</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-lg font-bold mb-4 text-white">Lista de Membros Cadastrados</h2>
+                    <div id="lista-atletas" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+                </div>
+            </section>
+
+            <!-- ABA DE CONFIGURAÇÕES / PERSONALIZAÇÃO -->
+            <section id="tab-config" class="tab-content hidden">
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg mb-6">
+                    <h2 class="text-lg font-bold mb-4 text-white flex items-center gap-2">
+                        <i class="custom-text fa-solid fa-gear"></i> Personalização do Aplicativo e Clube
+                    </h2>
+                    <p class="text-xs text-zinc-400 mb-6">Defina o nome da sua entidade, envie o escudo oficial e escolha a cor de destaque exata que preferir.</p>
+                    <form id="form-config" onsubmit="salvarConfigApp(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Nome do Clube / Entidade</label>
+                            <input type="text" id="cfg-nome-clube" placeholder="Ex: S.E. Novo Horizonte" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Escudo / Logo Principal do App</label>
+                            <input type="file" id="cfg-logo-clube" accept="image/*" class="w-full text-xs text-zinc-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-300">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Cor Principal (Paleta Livre)</label>
+                            <div class="flex items-center gap-3">
+                                <input type="color" id="cfg-cor-tema" value="#f97316" class="w-14 h-11 bg-zinc-800 border border-zinc-700 rounded-lg cursor-pointer p-1">
+                                <span class="text-xs text-zinc-400">Clique para selecionar qualquer tom</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit" class="custom-bg w-full text-white font-medium px-6 py-2.5 rounded-lg text-sm shadow transition">Salvar Personalização</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL DE RELATÓRIO DE JOGOS -->
+    <div id="modal-relatorio" class="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 bg-zinc-950 border-b border-zinc-800 flex flex-wrap justify-between items-center gap-2">
+                <h3 class="font-bold text-white text-base flex items-center gap-2">
+                    <i class="custom-text fa-solid fa-file-lines"></i> Relatório Geral de Jogos Agendados
+                </h3>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="exportarPDF()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow">
+                        <i class="fa-solid fa-file-pdf"></i> PDF
+                    </button>
+                    <button onclick="exportarExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow">
+                        <i class="fa-solid fa-file-excel"></i> Excel
+                    </button>
+                    <button onclick="window.print()" class="custom-bg text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow">
+                        <i class="fa-solid fa-print"></i> Imprimir
+                    </button>
+                    <button onclick="fecharRelatorioJogos()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg transition">
+                        <i class="fa-solid fa-xmark"></i> Fechar
+                    </button>
+                </div>
+            </div>
+            <div id="conteudo-relatorio" class="p-6 overflow-y-auto space-y-4 text-sm text-zinc-200"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONTROLE DE PRESENÇA (CHECK-IN) -->
+    <div id="modal-presenca" class="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 bg-zinc-950 border-b border-zinc-800 flex justify-between items-center">
+                <h3 class="font-bold text-white text-base flex items-center gap-2">
+                    <i class="custom-text fa-solid fa-clipboard-user"></i> Controle de Presença (Check-in)
+                </h3>
+                <button onclick="fecharModalPresenca()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="conteudo-presenca" class="p-6 overflow-y-auto space-y-3 text-sm text-zinc-200"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DE MANIFESTO DE VIAGEM -->
+    <div id="modal-manifesto" class="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 bg-zinc-950 border-b border-zinc-800 flex justify-between items-center">
+                <h3 class="font-bold text-white text-base flex items-center gap-2">
+                    <i class="custom-text fa-solid fa-bus"></i> Manifesto de Viagem (Ônibus / Transporte)
+                </h3>
+                <button onclick="fecharModalManifesto()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 text-sm text-zinc-300">
+                <form id="form-manifesto" onsubmit="salvarEImprimirManifesto(event)" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Origem</label>
+                            <input type="text" id="man-origem" placeholder="Ex: Santa Maria - RS" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Destino</label>
+                            <input type="text" id="man-destino" placeholder="Ex: Porto Alegre - RS" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Data e Hora de Saída</label>
+                            <input type="datetime-local" id="man-saida" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Data e Hora de Retorno</label>
+                            <input type="datetime-local" id="man-retorno" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Placa do Veículo</label>
+                            <input type="text" id="man-placa" placeholder="Ex: ABC-1D23" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Ano do Veículo</label>
+                            <input type="text" id="man-ano" placeholder="Ex: 2022" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Qtd de Lugares / Capacidade</label>
+                            <input type="number" id="man-lugares" placeholder="Ex: 44" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Quilometragem Rodada</label>
+                            <input type="text" id="man-km" placeholder="Ex: 320 km" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800">
+                        <p class="font-bold text-white text-xs mb-1"><i class="fa-solid fa-users custom-text"></i> Passageiros no Manifesto:</p>
+                        <p class="text-xs text-zinc-400">Serão incluídos automaticamente os membros confirmados (Check-in) ou todos cadastrados, além de 5 linhas em branco para preenchimento manual.</p>
+                        <div id="man-lista-passageiros-resumo" class="mt-2 text-xs text-zinc-300 font-medium"></div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-3 border-t border-zinc-800">
+                        <button type="button" onclick="fecharModalManifesto()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2.5 rounded-xl text-xs font-bold transition">Cancelar</button>
+                        <button type="submit" class="custom-bg text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow flex items-center gap-2 transition">
+                            <i class="fa-solid fa-file-pdf"></i> Gerar e Baixar PDF do Manifesto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE IMPORTAÇÃO DE PESSOAS -->
+    <div id="modal-importar-atletas" class="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 bg-zinc-950 border-b border-zinc-800 flex justify-between items-center">
+                <h3 class="font-bold text-white text-base flex items-center gap-2">
+                    <i class="text-emerald-400 fa-solid fa-file-arrow-up"></i> Importar ou Colar Membros em Lote
+                </h3>
+                <button onclick="fecharModalImportarAtletas()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 text-sm text-zinc-300">
+                <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-xs space-y-1.5">
+                    <p class="font-bold text-white mb-1"><i class="fa-solid fa-circle-info text-emerald-400"></i> Formato do texto colado (um por linha):</p>
+                    <p class="text-zinc-400">Ordem: <code class="text-orange-400">Nome; Função (Atleta/Diretoria/Comissão/Diversos); Categoria; CPF/RG; Telefone</code></p>
+                    <p class="text-zinc-500 italic">Exemplo: Carlos Silva; Comissão Técnica; Sub-17; 123.456.789-00; 55999999999</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Opção 1: Colar Lista de Texto</label>
+                    <textarea id="input-texto-atletas" rows="5" placeholder="Cole aqui a lista..." class="w-full border border-zinc-700 rounded-xl p-3 bg-zinc-950 text-xs text-white focus:ring-2 focus:ring-emerald-500 outline-none"></textarea>
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-zinc-800"></div>
+                    <span class="flex-shrink mx-4 text-zinc-500 text-[10px] uppercase tracking-wider font-bold">OU</span>
+                    <div class="flex-grow border-t border-zinc-800"></div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Opção 2: Enviar Arquivo (Excel, TXT ou PDF)</label>
+                    <input type="file" id="input-arquivo-atletas" accept=".xlsx, .xls, .csv, .txt, .pdf" class="w-full text-xs text-zinc-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700 cursor-pointer border border-zinc-700 rounded-xl bg-zinc-950 p-2">
+                </div>
+
+                <div id="status-importacao" class="text-xs text-center font-medium hidden"></div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-zinc-800">
+                    <button onclick="fecharModalImportarAtletas()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 rounded-xl text-xs font-bold transition">Cancelar</button>
+                    <button onclick="executarImportacaoAtletas()" class="custom-bg text-white px-5 py-2 rounded-xl text-xs font-bold shadow transition">Processar e Importar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de Gestão e Conexão com o Firebase -->
+    <script>
+        // === CHAVES DO FIREBASE CONFIGURADAS ===
+        const firebaseConfig = {
+            apiKey: "AIzaSyB5UBjiV9pvLE9SHF9Zg1ariKz4WGFmIeQ",
+            authDomain: "marcador-de-jogos.firebaseapp.com",
+            projectId: "marcador-de-jogos",
+            storageBucket: "marcador-de-jogos.firebasestorage.app",
+            messagingSenderId: "1014983034234",
+            appId: "1:1014983034234:web:66a129d442e9a0338a82c3"
+        };
+        // ======================================
+
+        firebase.initializeApp(firebaseConfig);
+        const firestore = firebase.firestore();
+
+        const senhaSalva = localStorage.getItem('fc_senha');
+        if (!senhaSalva) {
+            document.getElementById('login-titulo').innerText = "Criar Senha de Acesso";
+            document.getElementById('login-sub').innerText = "Defina uma senha para proteger seus dados";
+            document.getElementById('btn-submit-auth').innerText = "Cadastrar Senha";
+        }
+
+        function autenticar(e) {
+            e.preventDefault();
+            const senhaInput = document.getElementById('input-senha').value;
+            const erroEl = document.getElementById('login-erro');
+
+            if (!senhaSalva) {
+                localStorage.setItem('fc_senha', senhaInput);
+                liberarApp();
+            } else {
+                if (senhaInput === senhaSalva) {
+                    liberarApp();
+                } else {
+                    erroEl.classList.remove('hidden');
+                    document.getElementById('input-senha').value = '';
+                }
+            }
+        }
+
+        function liberarApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+            ouvinteTempoReal();
+        }
+
+        function sair() {
+            document.getElementById('app-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('input-senha').value = '';
+            document.getElementById('login-erro').classList.add('hidden');
+        }
+
+        let db = {
+            config: {
+                nomeClube: "Sociedade Esportiva Novo Horizonte",
+                logoClube: "",
+                corTema: "#f97316"
+            },
+            campeonatos: [],
+            categorias: [],
+            clubes: [],
+            estadios: [],
+            atletas: [],
+            jogos: []
+        };
+
+        function ouvinteTempoReal() {
+            firestore.collection('sistema').doc('dados_futebol').onSnapshot((doc) => {
+                if (doc.exists) {
+                    db = doc.data();
+                    if (!db.config) {
+                        db.config = { nomeClube: "Sociedade Esportiva Novo Horizonte", logoClube: "", corTema: "#f97316" };
+                    }
+                    atualizarInterface();
+                } else {
+                    salvarDados();
+                }
+            }, (error) => {
+                console.error("Erro ao sincronizar com o Firebase:", error);
+            });
+        }
+
+        function salvarDados() {
+            firestore.collection('sistema').doc('dados_futebol').set(db)
+                .then(() => {
+                    atualizarInterface();
+                })
+                .catch((error) => {
+                    alert("Erro ao salvar na nuvem: " + error.message);
+                });
+        }
+
+        function exportarBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            const dataAtual = new Date().toISOString().slice(0, 10);
+            downloadAnchor.setAttribute("download", `backup_futebol_${dataAtual}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('custom-bg', 'text-white');
+                btn.classList.add('bg-zinc-900', 'text-zinc-300');
+            });
+            const activeBtn = document.getElementById(tabId.replace('tab-', 'btn-'));
+            if(activeBtn) {
+                activeBtn.classList.remove('bg-zinc-900', 'text-zinc-300');
+                activeBtn.classList.add('custom-bg', 'text-white');
+            }
+        }
+
+        function redimensionarEConverterImagem(fileInputId, callback) {
+            const fileInput = document.getElementById(fileInputId);
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const MAX_SIZE = 120; 
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                        } else {
+                            if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        callback(canvas.toDataURL('image/jpeg', 0.75));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                callback('');
+            }
+        }
+
+        // --- CONFIGURAÇÕES / PERSONALIZAÇÃO ---
+        function salvarConfigApp(e) {
+            e.preventDefault();
+            const nomeClube = document.getElementById('cfg-nome-clube').value;
+            const corTema = document.getElementById('cfg-cor-tema').value;
+
+            redimensionarEConverterImagem('cfg-logo-clube', function(logo) {
+                db.config.nomeClube = nomeClube;
+                db.config.corTema = corTema;
+                if (logo) {
+                    db.config.logoClube = logo;
+                }
+                salvarDados();
+                alert("Personalização salva com sucesso!");
+            });
+        }
+
+        // --- IMPORTAÇÃO / COLAGEM EM MASSA ---
+        function abrirModalImportarAtletas() {
+            document.getElementById('input-texto-atletas').value = '';
+            document.getElementById('input-arquivo-atletas').value = '';
+            document.getElementById('status-importacao').classList.add('hidden');
+            document.getElementById('modal-importar-atletas').classList.remove('hidden');
+        }
+
+        function fecharModalImportarAtletas() {
+            document.getElementById('modal-importar-atletas').classList.add('hidden');
+        }
+
+        async function executarImportacaoAtletas() {
+            const textoInput = document.getElementById('input-texto-atletas').value.trim();
+            const fileInput = document.getElementById('input-arquivo-atletas');
+            const statusEl = document.getElementById('status-importacao');
+
+            statusEl.classList.remove('hidden', 'text-rose-400');
+            statusEl.classList.add('text-zinc-400');
+            statusEl.innerText = "Processando cadastros...";
+
+            try {
+                let novosMembros = [];
+
+                if (textoInput) {
+                    novosMembros = parsearTextoMembros(textoInput);
+                } else if (fileInput.files && fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    const fileName = file.name.toLowerCase();
+
+                    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
+                        novosMembros = await lerArquivoExcelMembros(file);
+                    } else if (fileName.endsWith('.txt')) {
+                        novosMembros = await lerArquivoTxtMembros(file);
+                    } else if (fileName.endsWith('.pdf')) {
+                        novosMembros = await lerArquivoPdfMembros(file);
+                    } else {
+                        throw new Error("Formato de arquivo não suportado.");
+                    }
+                } else {
+                    throw new Error("Cole o texto na caixa ou selecione um arquivo.");
+                }
+
+                if (novosMembros.length === 0) {
+                    throw new Error("Nenhum cadastro válido foi identificado.");
+                }
+
+                let count = 0;
+                novosMembros.forEach(m => {
+                    if (m.nome) {
+                        db.atletas.push({
+                            id: Date.now() + Math.random(),
+                            nome: m.nome.trim(),
+                            funcao: m.funcao || 'Atleta',
+                            categoria: m.categoria || (db.categorias[0] ? db.categorias[0].nome : 'Geral'),
+                            doc: m.doc || '',
+                            telefone: m.telefone || ''
+                        });
+                        count++;
+                    }
+                });
+
+                salvarDados();
+                statusEl.classList.remove('text-zinc-400');
+                statusEl.classList.add('text-emerald-400');
+                statusEl.innerText = `Sucesso! ${count} membros importados.`;
+                setTimeout(() => {
+                    fecharModalImportarAtletas();
+                }, 1500);
+
+            } catch (error) {
+                console.error(error);
+                statusEl.classList.remove('text-zinc-400');
+                statusEl.classList.add('text-rose-400');
+                statusEl.innerText = "Erro: " + error.message;
+            }
+        }
+
+        function parsearTextoMembros(texto) {
+            const lines = texto.split(/\r?\n/);
+            const membros = [];
+
+            lines.forEach(line => {
+                if (!line.trim()) return;
+                const partes = line.split(/[,;\t]/).map(p => p.trim());
+                if (partes.length >= 1 && partes[0]) {
+                    membros.push({
+                        nome: partes[0] || '',
+                        funcao: partes[1] || 'Atleta',
+                        categoria: partes[2] || '',
+                        doc: partes[3] || '',
+                        telefone: partes[4] || ''
+                    });
+                }
+            });
+            return membros;
+        }
+
+        function lerArquivoExcelMembros(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const sheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[sheetName];
+                        const json = XLSX.utils.sheet_to_json(sheet);
+                        
+                        const membros = json.map(row => ({
+                            nome: row.Nome || row.nome || row.Atleta || row.atleta,
+                            funcao: row.Funcao || row.função || row.Função || 'Atleta',
+                            categoria: row.Categoria || row.categoria || row.Cat,
+                            doc: row.CPF || row.cpf || row.RG || row.rg || row.Documento || row.documento || row.Doc || row.doc,
+                            telefone: row.Telefone || row.telefone || row.WhatsApp || row.whatsapp || row.Celular
+                        })).filter(m => m.nome);
+
+                        resolve(membros);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function lerArquivoTxtMembros(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        resolve(parsearTextoMembros(e.target.result));
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        async function lerArquivoPdfMembros(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            const pdf = await loadingTask.promise;
+            let membros = [];
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const textItems = textContent.items.map(item => item.str);
+                
+                textItems.forEach(str => {
+                    if (str.trim().length > 3) {
+                        const partes = str.split(/\s{2,}/);
+                        if (partes.length >= 2) {
+                            membros.push({
+                                nome: partes[0],
+                                funcao: partes[1] || 'Atleta',
+                                categoria: partes[2] || '',
+                                doc: partes[3] || '',
+                                telefone: partes[4] || ''
+                            });
+                        } else {
+                            membros.push({ nome: str, funcao: 'Atleta', categoria: '', doc: '', telefone: '' });
+                        }
+                    }
+                });
+            }
+            return membros.filter(m => m.nome && m.nome.length > 2);
+        }
+
+        // --- MANIFESTO DE VIAGEM ---
+        let jogoAtualManifestoId = null;
+        function abrirModalManifesto(jogoId) {
+            jogoAtualManifestoId = jogoId;
+            const jogo = db.jogos.find(j => j.id === jogoId);
+            if (!jogo) return;
+
+            const man = jogo.manifesto || {
+                origem: db.config.nomeClube || 'Sede do Clube',
+                destino: jogo.local || '',
+                saida: jogo.data ? `${jogo.data}T${jogo.saida || '08:00'}` : '',
+                retorno: jogo.data ? `${jogo.data}T18:00` : '',
+                placa: '',
+                ano: '',
+                lugares: '44',
+                km: '150 km'
+            };
+
+            document.getElementById('man-origem').value = man.origem;
+            document.getElementById('man-destino').value = man.destino;
+            document.getElementById('man-saida').value = man.saida;
+            document.getElementById('man-retorno').value = man.retorno;
+            document.getElementById('man-placa').value = man.placa;
+            document.getElementById('man-ano').value = man.ano || '';
+            document.getElementById('man-lugares').value = man.lugares;
+            document.getElementById('man-km').value = man.km;
+
+            const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : db.atletas.map(a => a.id);
+            const passageirosCount = passageirosIds.length;
+            document.getElementById('man-lista-passageiros-resumo').innerHTML = `Total de ${passageirosCount} passageiros selecionados (${(jogo.presencas && jogo.presencas.length > 0) ? 'Check-in confirmado' : 'Elenco Completo'}) + 5 espaços em branco.`;
+
+            document.getElementById('modal-manifesto').classList.remove('hidden');
+        }
+
+        function fecharModalManifesto() {
+            document.getElementById('modal-manifesto').classList.add('hidden');
+            jogoAtualManifestoId = null;
+        }
+
+        function salvarEImprimirManifesto(e) {
+            e.preventDefault();
+            const jogo = db.jogos.find(j => j.id === jogoAtualManifestoId);
+            if (!jogo) return;
+
+            const manifesto = {
+                origem: document.getElementById('man-origem').value,
+                destino: document.getElementById('man-destino').value,
+                saida: document.getElementById('man-saida').value,
+                retorno: document.getElementById('man-retorno').value,
+                placa: document.getElementById('man-placa').value,
+                ano: document.getElementById('man-ano').value,
+                lugares: document.getElementById('man-lugares').value,
+                km: document.getElementById('man-km').value
+            };
+
+            jogo.manifesto = manifesto;
+            salvarDados();
+
+            gerarPdfManifesto(jogo, manifesto);
+            fecharModalManifesto();
+        }
+
+        function gerarPdfManifesto(jogo, man) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const nomeClube = db.config.nomeClube || 'Clube';
+
+            doc.setFontSize(16);
+            doc.text(`MANIFESTO DE TRANSPORTE E VIAGEM`, 14, 18);
+            doc.setFontSize(11);
+            doc.text(`${nomeClube} | Jogo: ${jogo.mandante} x ${jogo.visitante} (${jogo.campeonato} - ${jogo.categoria})`, 14, 25);
+
+            doc.setFontSize(10);
+            doc.setDrawColor(200);
+            doc.setFillColor(245, 245, 245);
+            doc.roundedRect(14, 30, 182, 36, 3, 3, 'FD');
+
+            const dataSaidaFmt = man.saida ? man.saida.replace('T', ' às ') : 'N/I';
+            const dataRetornoFmt = man.retorno ? man.retorno.replace('T', ' às ') : 'N/I';
+
+            doc.text(`Origem: ${man.origem}`, 18, 38);
+            doc.text(`Destino: ${man.destino}`, 18, 45);
+            doc.text(`Saída: ${dataSaidaFmt}`, 18, 52);
+            doc.text(`Retorno: ${dataRetornoFmt}`, 18, 59);
+
+            doc.text(`Placa do Veículo: ${man.placa} (Ano: ${man.ano || 'N/I'})`, 110, 38);
+            doc.text(`Capacidade (Lugares): ${man.lugares}`, 110, 45);
+            doc.text(`Quilometragem Rodada: ${man.km}`, 110, 52);
+
+            // Passageiros cadastrados
+            const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : db.atletas.map(a => a.id);
+            const passageiros = db.atletas.filter(a => passageirosIds.includes(a.id));
+
+            const tableData = passageiros.map((p, index) => [
+                index + 1,
+                p.nome,
+                p.funcao || 'Atleta',
+                p.doc || 'Não informado'
+            ]);
+
+            // Adicionar 5 espaços/linhas em branco para preenchimento manual
+            for (let i = 1; i <= 5; i++) {
+                tableData.push([
+                    passageiros.length + i,
+                    '',
+                    '',
+                    ''
+                ]);
+            }
+
+            doc.autoTable({
+                startY: 72,
+                head: [['#', 'Nome Completo', 'Função', 'CPF / RG']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [249, 115, 22] },
+                styles: { fontSize: 9, minCellHeight: 8 }
+            });
+
+            const finalY = doc.lastAutoTable.finalY + 12;
+            doc.text(`Total de Passageiros Cadastrados: ${passageiros.length}`, 14, finalY);
+            doc.text(`Assinatura do Responsável / Motorista: ____________________________________`, 14, finalY + 12);
+
+            doc.save(`manifesto_viagem_${jogo.data}_${jogo.mandante}_vs_${jogo.visitante}.pdf`);
+        }
+
+        // --- RELATÓRIO DE JOGOS & EXPORTAÇÕES ---
+        function abrirRelatorioJogos() {
+            const modal = document.getElementById('modal-relatorio');
+            const container = document.getElementById('conteudo-relatorio');
+            const nomeClube = db.config.nomeClube || 'Clube';
+
+            if (!db.jogos || db.jogos.length === 0) {
+                container.innerHTML = `<p class="text-zinc-400 text-center py-8">Nenhum jogo cadastrado para gerar relatório.</p>`;
+            } else {
+                const jogosOrdenados = [...db.jogos].sort((a, b) => new Date(a.data) - new Date(b.data));
+
+                container.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="border-b border-zinc-800 pb-3 mb-4">
+                            <h4 class="font-bold text-white text-lg">Relatório Oficial de Partidas - ${nomeClube}</h4>
+                            <p class="text-xs text-zinc-400">Total de jogos agendados: ${jogosOrdenados.length}</p>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-zinc-950 text-zinc-400 border-b border-zinc-800">
+                                        <th class="p-3 font-semibold">Data / Hora</th>
+                                        <th class="p-3 font-semibold">Competição / Categoria</th>
+                                        <th class="p-3 font-semibold">Confronto</th>
+                                        <th class="p-3 font-semibold">Local do Jogo</th>
+                                        <th class="p-3 font-semibold">Apresentação</th>
+                                        <th class="p-3 font-semibold">Saída</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-zinc-800/60">
+                                    ${jogosOrdenados.map(j => `
+                                        <tr class="hover:bg-zinc-800/30">
+                                            <td class="p-3 whitespace-nowrap"><strong class="text-white">${j.data.split('-').reverse().join('/')}</strong><br>${j.hora}</td>
+                                            <td class="p-3 whitespace-nowrap"><span class="custom-text font-bold">${j.campeonato}</span><br>${j.categoria}</td>
+                                            <td class="p-3 font-bold text-white whitespace-nowrap">${j.mandante} x ${j.visitante}</td>
+                                            <td class="p-3">${j.local}</td>
+                                            <td class="p-3 whitespace-nowrap">${j.horaApresentacao || '--:--'} <br><span class="text-zinc-400 font-normal">(${j.localApresentacao || 'N/I'})</span></td>
+                                            <td class="p-3 whitespace-nowrap">${j.saida}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function fecharRelatorioJogos() {
+            document.getElementById('modal-relatorio').classList.add('hidden');
+        }
+
+        function exportarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const nomeClube = db.config.nomeClube || 'Clube';
+
+            doc.setFontSize(16);
+            doc.text(`Relatório Oficial de Partidas - ${nomeClube}`, 14, 20);
+            doc.setFontSize(10);
+            doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
+
+            const jogosOrdenados = [...db.jogos].sort((a, b) => new Date(a.data) - new Date(b.data));
+            const tableData = jogosOrdenados.map(j => [
+                j.data.split('-').reverse().join('/') + ' ' + j.hora,
+                j.campeonato + ' / ' + j.categoria,
+                j.mandante + ' x ' + j.visitante,
+                j.local,
+                j.horaApresentacao ? `${j.horaApresentacao} (${j.localApresentacao || 'N/I'})` : '--:--',
+                j.saida
+            ]);
+
+            doc.autoTable({
+                startY: 35,
+                head: [['Data / Hora', 'Competição / Cat.', 'Confronto', 'Local', 'Apresentação', 'Saída']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [249, 115, 22] },
+                styles: { fontSize: 8 }
+            });
+
+            doc.save(`relatorio_jogos_${new Date().toISOString().slice(0,10)}.pdf`);
+        }
+
+        function exportarExcel() {
+            const jogosOrdenados = [...db.jogos].sort((a, b) => new Date(a.data) - new Date(b.data));
+            const dadosExcel = jogosOrdenados.map(j => ({
+                'Data': j.data.split('-').reverse().join('/'),
+                'Hora': j.hora,
+                'Campeonato': j.campeonato,
+                'Categoria': j.categoria,
+                'Mandante': j.mandante,
+                'Visitante': j.visitante,
+                'Local do Jogo': j.local,
+                'Hora Apresentação': j.horaApresentacao || '',
+                'Local Apresentação': j.localApresentacao || '',
+                'Saída da Viagem': j.saida || '',
+                'Presenças Confirmadas': (j.presencas || []).length
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(dadosExcel);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Jogos Agendados");
+            XLSX.writeFile(workbook, `relatorio_jogos_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        // --- CONTROLE DE PRESENÇA (CHECK-IN) ---
+        let jogoAtualPresencaId = null;
+        function abrirModalPresenca(jogoId) {
+            jogoAtualPresencaId = jogoId;
+            const jogo = db.jogos.find(j => j.id === jogoId);
+            if (!jogo) return;
+
+            if (!jogo.presencas) jogo.presencas = [];
+
+            const container = document.getElementById('conteudo-presenca');
+            const atletasList = db.atletas;
+
+            if (atletasList.length === 0) {
+                container.innerHTML = `<p class="text-zinc-400 text-center py-6">Nenhum membro cadastrado no sistema.</p>`;
+            } else {
+                container.innerHTML = `
+                    <div class="mb-3 text-xs text-zinc-400 bg-zinc-950 p-3 rounded-xl border border-zinc-800">
+                        Confronto: <strong class="text-white">${jogo.mandante} x ${jogo.visitante}</strong><br>
+                        Categoria: <span class="custom-text font-bold">${jogo.categoria}</span>
+                    </div>
+                    <div class="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+                        ${atletasList.map(a => {
+                            const confirmado = jogo.presencas.includes(a.id);
+                            return `
+                                <label class="flex items-center justify-between p-3 bg-zinc-950 border ${confirmado ? 'border-orange-500/50 bg-orange-500/5' : 'border-zinc-800'} rounded-xl cursor-pointer hover:border-zinc-700 transition">
+                                    <div class="flex items-center gap-3">
+                                        <input type="checkbox" ${confirmado ? 'checked' : ''} onchange="togglePresenca(${a.id})" class="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-orange-500 focus:ring-orange-500">
+                                        <div>
+                                            <p class="font-bold text-white text-sm">${a.nome} <span class="text-[10px] px-2 py-0.5 bg-zinc-800 rounded text-zinc-300">${a.funcao || 'Atleta'}</span></p>
+                                            <p class="text-xs text-zinc-400">${a.categoria} ${a.doc ? '• Doc: ' + a.doc : ''}</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-xs px-2.5 py-1 rounded-full ${confirmado ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
+                                        ${confirmado ? 'Confirmado' : 'Pendente'}
+                                    </span>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+            document.getElementById('modal-presenca').classList.remove('hidden');
+        }
+
+        function fecharModalPresenca() {
+            document.getElementById('modal-presenca').classList.add('hidden');
+            jogoAtualPresencaId = null;
+        }
+
+        function togglePresenca(atletaId) {
+            const jogo = db.jogos.find(j => j.id === jogoAtualPresencaId);
+            if (!jogo) return;
+            if (!jogo.presencas) jogo.presencas = [];
+
+            const idx = jogo.presencas.indexOf(atletaId);
+            if (idx > -1) {
+                jogo.presencas.splice(idx, 1);
+            } else {
+                jogo.presencas.push(atletaId);
+            }
+            salvarDados();
+            abrirModalPresenca(jogoAtualPresencaId);
+        }
+
+        // --- CAMPEONATOS ---
+        function salvarCampeonato(e) {
+            e.preventDefault();
+            const id = document.getElementById('camp-id').value;
+            const nome = document.getElementById('camp-nome').value;
+
+            if (id) {
+                const item = db.campeonatos.find(c => c.id == id);
+                if (item) item.nome = nome;
+            } else {
+                db.campeonatos.push({ id: Date.now(), nome });
+            }
+            cancelarEdicaoCampeonato();
+            salvarDados();
+        }
+        function editarCampeonato(id) {
+            const item = db.campeonatos.find(c => c.id == id);
+            if(item) {
+                document.getElementById('camp-id').value = item.id;
+                document.getElementById('camp-nome').value = item.nome;
+                document.getElementById('titulo-form-camp').innerText = "Editar Campeonato";
+                document.getElementById('btn-salvar-camp').innerText = "Atualizar";
+                document.getElementById('btn-cancelar-camp').classList.remove('hidden');
+            }
+        }
+        function cancelarEdicaoCampeonato() {
+            document.getElementById('form-camp').reset();
+            document.getElementById('camp-id').value = '';
+            document.getElementById('titulo-form-camp').innerText = "Cadastrar Campeonato";
+            document.getElementById('btn-salvar-camp').innerText = "Adicionar";
+            document.getElementById('btn-cancelar-camp').classList.add('hidden');
+        }
+
+        // --- CATEGORIAS ---
+        function salvarCategoria(e) {
+            e.preventDefault();
+            const id = document.getElementById('cat-id').value;
+            const nome = document.getElementById('cat-nome').value;
+
+            if (id) {
+                const item = db.categorias.find(c => c.id == id);
+                if (item) item.nome = nome;
+            } else {
+                db.categorias.push({ id: Date.now(), nome });
+            }
+            cancelarEdicaoCategoria();
+            salvarDados();
+        }
+        function editarCategoria(id) {
+            const item = db.categorias.find(c => c.id == id);
+            if(item) {
+                document.getElementById('cat-id').value = item.id;
+                document.getElementById('cat-nome').value = item.nome;
+                document.getElementById('titulo-form-cat').innerText = "Editar Categoria";
+                document.getElementById('btn-salvar-cat').innerText = "Atualizar";
+                document.getElementById('btn-cancelar-cat').classList.remove('hidden');
+            }
+        }
+        function cancelarEdicaoCategoria() {
+            document.getElementById('form-cat').reset();
+            document.getElementById('cat-id').value = '';
+            document.getElementById('titulo-form-cat').innerText = "Cadastrar Categoria";
+            document.getElementById('btn-salvar-cat').innerText = "Adicionar";
+            document.getElementById('btn-cancelar-cat').classList.add('hidden');
+        }
+
+        // --- CLUBES ---
+        function salvarClube(e) {
+            e.preventDefault();
+            const id = document.getElementById('clube-id').value;
+            const nome = document.getElementById('clube-nome').value;
+
+            redimensionarEConverterImagem('clube-logo', function(logo) {
+                if (id) {
+                    const item = db.clubes.find(c => c.id == id);
+                    if (item) {
+                        item.nome = nome;
+                        if (logo) item.logo = logo;
+                    }
+                } else {
+                    db.clubes.push({ id: Date.now(), nome, logo: logo || '' });
+                }
+                cancelarEdicaoClube();
+                salvarDados();
+            });
+        }
+        function editarClube(id) {
+            const item = db.clubes.find(c => c.id == id);
+            if(item) {
+                document.getElementById('clube-id').value = item.id;
+                document.getElementById('clube-nome').value = item.nome;
+                document.getElementById('titulo-form-clube').innerText = "Editar Clube";
+                document.getElementById('btn-salvar-clube').innerText = "Atualizar";
+                document.getElementById('btn-cancelar-clube').classList.remove('hidden');
+            }
+        }
+        function cancelarEdicaoClube() {
+            document.getElementById('form-clube').reset();
+            document.getElementById('clube-id').value = '';
+            document.getElementById('titulo-form-clube').innerText = "Cadastrar Clube / Escudo";
+            document.getElementById('btn-salvar-clube').innerText = "Salvar Clube";
+            document.getElementById('btn-cancelar-clube').classList.add('hidden');
+        }
+
+        // --- ESTÁDIOS ---
+        function salvarEstadio(e) {
+            e.preventDefault();
+            const id = document.getElementById('est-id').value;
+            const nome = document.getElementById('est-nome').value;
+            const cidade = document.getElementById('est-cidade').value;
+
+            if (id) {
+                const item = db.estadios.find(es => es.id == id);
+                if (item) { item.nome = nome; item.cidade = cidade; }
+            } else {
+                db.estadios.push({ id: Date.now(), nome, cidade });
+            }
+            cancelarEdicaoEstadio();
+            salvarDados();
+        }
+        function editarEstadio(id) {
+            const item = db.estadios.find(es => es.id == id);
+            if(item) {
+                document.getElementById('est-id').value = item.id;
+                document.getElementById('est-nome').value = item.nome;
+                document.getElementById('est-cidade').value = item.cidade;
+                document.getElementById('titulo-form-est').innerText = "Editar Estádio";
+                document.getElementById('btn-salvar-est').innerText = "Atualizar";
+                document.getElementById('btn-cancelar-est').classList.remove('hidden');
+            }
+        }
+        function cancelarEdicaoEstadio() {
+            document.getElementById('form-est').reset();
+            document.getElementById('est-id').value = '';
+            document.getElementById('titulo-form-est').innerText = "Cadastrar Estádio / Campo";
+            document.getElementById('btn-salvar-est').innerText = "Salvar Estádio";
+            document.getElementById('btn-cancelar-est').classList.add('hidden');
+        }
+
+        // --- ATLETAS E PESSOAS ---
+        function salvarAtleta(e) {
+            e.preventDefault();
+            const id = document.getElementById('atleta-id').value;
+            const atletaData = {
+                id: id ? Number(id) : Date.now(),
+                nome: document.getElementById('atleta-nome').value,
+                funcao: document.getElementById('atleta-funcao').value,
+                categoria: document.getElementById('atleta-cat').value,
+                doc: document.getElementById('atleta-doc').value,
+                telefone: document.getElementById('atleta-tel').value
+            };
+
+            if (id) {
+                const index = db.atletas.findIndex(a => a.id == id);
+                if (index !== -1) db.atletas[index] = atletaData;
+            } else {
+                db.atletas.push(atletaData);
+            }
+            cancelarEdicaoAtleta();
+            salvarDados();
+        }
+        function editarAtleta(id) {
+            const item = db.atletas.find(a => a.id == id);
+            if(item) {
+                document.getElementById('atleta-id').value = item.id;
+                document.getElementById('atleta-nome').value = item.nome;
+                document.getElementById('atleta-funcao').value = item.funcao || 'Atleta';
+                document.getElementById('atleta-cat').value = item.categoria;
+                document.getElementById('atleta-doc').value = item.doc || '';
+                document.getElementById('atleta-tel').value = item.telefone;
+                document.getElementById('titulo-form-atleta').innerText = "Editar Cadastro";
+                document.getElementById('btn-salvar-atleta').innerText = "Atualizar";
+                document.getElementById('btn-cancelar-atleta').classList.remove('hidden');
+            }
+        }
+        function cancelarEdicaoAtleta() {
+            document.getElementById('form-atleta').reset();
+            document.getElementById('atleta-id').value = '';
+            document.getElementById('titulo-form-atleta').innerText = "Cadastrar Pessoa / Membro";
+            document.getElementById('btn-salvar-atleta').innerText = "Salvar Cadastro";
+            document.getElementById('btn-cancelar-atleta').classList.add('hidden');
+        }
+
+        // --- JOGOS ---
+        function salvarJogo(e) {
+            e.preventDefault();
+            const id = document.getElementById('jogo-id').value;
+            const camp = document.getElementById('jogo-camp').value;
+            const cat = document.getElementById('jogo-cat').value;
+            const estadioId = document.getElementById('jogo-estadio').value;
+            const mandanteId = document.getElementById('jogo-mandante').value;
+            const visitanteId = document.getElementById('jogo-visitante').value;
+            const data = document.getElementById('jogo-data').value;
+            const hora = document.getElementById('jogo-hora').value;
+            const horaApresentacao = document.getElementById('jogo-hora-apresentacao').value;
+            const localApresentacao = document.getElementById('jogo-local-apresentacao').value;
+            const saida = document.getElementById('jogo-saida').value;
+            const orientacoes = document.getElementById('jogo-orientacoes').value;
+
+            const estadioObj = db.estadios.find(es => es.id == estadioId);
+            const mandanteObj = db.clubes.find(c => c.id == mandanteId);
+            const visitanteObj = db.clubes.find(c => c.id == visitanteId);
+
+            const jogoExistente = id ? db.jogos.find(j => j.id == id) : null;
+
+            const jogoData = {
+                id: id ? Number(id) : Date.now(),
+                campeonato: camp,
+                categoria: cat,
+                mandante: mandanteObj ? mandanteObj.nome : '',
+                logoMandante: mandanteObj ? mandanteObj.logo : '',
+                visitante: visitanteObj ? visitanteObj.nome : '',
+                logoVisitante: visitanteObj ? visitanteObj.logo : '',
+                local: estadioObj ? `${estadioObj.nome} (${estadioObj.cidade})` : '',
+                data, hora, horaApresentacao, localApresentacao, saida, orientacoes,
+                presencas: jogoExistente ? (jogoExistente.presencas || []) : [],
+                manifesto: jogoExistente ? jogoExistente.manifesto : null
+            };
+
+            if (id) {
+                const index = db.jogos.findIndex(j => j.id == id);
+                if (index !== -1) db.jogos[index] = jogoData;
+            } else {
+                db.jogos.push(jogoData);
+            }
+            cancelarEdicaoJogo();
+            salvarDados();
+        }
+        function editarJogo(id) {
+            const item = db.jogos.find(j => j.id == id);
+            if(item) {
+                document.getElementById('jogo-id').value = item.id;
+                document.getElementById('jogo-camp').value = item.campeonato;
+                document.getElementById('jogo-cat').value = item.categoria;
+                document.getElementById('jogo-data').value = item.data;
+                document.getElementById('jogo-hora').value = item.hora;
+                document.getElementById('jogo-hora-apresentacao').value = item.horaApresentacao || '';
+                document.getElementById('jogo-local-apresentacao').value = item.localApresentacao || '';
+                document.getElementById('jogo-saida').value = item.saida;
+                document.getElementById('jogo-orientacoes').value = item.orientacoes || '';
+                
+                document.getElementById('titulo-form-jogo').innerText = "Editar Jogo";
+                document.getElementById('btn-salvar-jogo').innerText = "Atualizar Jogo";
+                document.getElementById('btn-cancelar-jogo').classList.remove('hidden');
+                switchTab('tab-jogos');
+            }
+        }
+        function cancelarEdicaoJogo() {
+            document.getElementById('form-jogo').reset();
+            document.getElementById('jogo-id').value = '';
+            document.getElementById('titulo-form-jogo').innerHTML = `<i class="custom-text fa-solid fa-calendar-days"></i> Cadastrar Novo Jogo`;
+            document.getElementById('btn-salvar-jogo').innerText = "Salvar Jogo";
+            document.getElementById('btn-cancelar-jogo').classList.add('hidden');
+        }
+
+        function deletar(tipo, id) {
+            if(confirm("Deseja realmente excluir este item?")) {
+                db[tipo] = db[tipo].filter(item => item.id !== id);
+                salvarDados();
+            }
+        }
+
+        function enviarWhatsApp(mandante, visitante, categoria, data, hora, horaApresentacao, localApresentacao, saida, local, orientacoes) {
+            const nomeClube = db.config.nomeClube || 'Clube';
+            const dataFmt = data.split('-').reverse().join('/');
+            let mensagem = `🚨 *${nomeClube.toUpperCase()} - CONVOCAÇÃO* 🚨%0A%0A⚽ *${mandante}* 🆚 *${visitante}*%0A🏆 Competição: *${categoria}*%0A%0A📅 Data: *${dataFmt}* | Início: *${hora}*%0A📍 Local do Jogo: *${local}*%0A%0A⏰ *LOGÍSTICA:*%0A• Apresentação: *${horaApresentacao || 'N/I'}* em *${localApresentacao || 'Local não informado'}*%0A• Saída da Viagem: *${saida}*`;
+            
+            if (orientacoes) {
+                mensagem += `%0A%0A📌 *ORIENTAÇÕES GERAIS:*%0A${encodeURIComponent(orientacoes)}`;
+            }
+            
+            mensagem += `%0A%0A⚠️ *Comparecer uniformizado e com documentos em mãos!* Favor confirmar presença.`;
+            window.open(`https://api.whatsapp.com/send?text=${mensagem}`, '_blank');
+        }
+
+        function atualizarInterface() {
+            const config = db.config || { nomeClube: "Sociedade Esportiva Novo Horizonte", logoClube: "", corTema: "#f97316" };
+            const cor = config.corTema || '#f97316';
+
+            let styleTag = document.getElementById('dynamic-theme');
+            if (!styleTag) {
+                styleTag = document.createElement('style');
+                styleTag.id = 'dynamic-theme';
+                document.head.appendChild(styleTag);
+            }
+            styleTag.innerHTML = `
+                .custom-bg { background-color: ${cor} !important; }
+                .custom-bg:hover { filter: brightness(0.9); }
+                .custom-text { color: ${cor} !important; }
+                .custom-border { border-color: ${cor} !important; }
+                .custom-badge { background-color: ${cor}20; border-color: ${cor}50; color: ${cor}; }
+                .custom-vs { background-color: ${cor}15; border-color: ${cor}40; color: ${cor}; }
+            `;
+
+            document.getElementById('header-club-name').innerText = config.nomeClube;
+            const logoContainer = document.getElementById('header-logo-container');
+            if (config.logoClube) {
+                logoContainer.innerHTML = `<img src="${config.logoClube}" class="w-10 h-10 object-contain bg-zinc-900 p-1 rounded-xl border border-zinc-800 shadow">`;
+            } else {
+                const initials = config.nomeClube.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+                logoContainer.innerHTML = `<div class="custom-bg w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-lg">${initials}</div>`;
+            }
+
+            document.getElementById('cfg-nome-clube').value = config.nomeClube;
+            document.getElementById('cfg-cor-tema').value = cor;
+
+            const selectCamp = document.getElementById('jogo-camp');
+            selectCamp.innerHTML = db.campeonatos.length ? '' : '<option value="">Cadastre um campeonato</option>';
+            db.campeonatos.forEach(c => selectCamp.innerHTML += `<option value="${c.nome}">${c.nome}</option>`);
+
+            const selectCat = document.getElementById('jogo-cat');
+            selectCat.innerHTML = db.categorias.length ? '' : '<option value="">Cadastre uma categoria</option>';
+            db.categorias.forEach(c => selectCat.innerHTML += `<option value="${c.nome}">${c.nome}</option>`);
+
+            const selectAtletaCat = document.getElementById('atleta-cat');
+            selectAtletaCat.innerHTML = db.categorias.length ? '' : '<option value="">Sem categoria específica</option>';
+            db.categorias.forEach(c => selectAtletaCat.innerHTML += `<option value="${c.nome}">${c.nome}</option>`);
+
+            const filtroCatEl = document.getElementById('filtro-jogos-cat');
+            const catSelecionadaAtual = filtroCatEl.value;
+            filtroCatEl.innerHTML = `<option value="">Todas as Categorias</option>`;
+            db.categorias.forEach(c => {
+                filtroCatEl.innerHTML += `<option value="${c.nome}" ${c.nome === catSelecionadaAtual ? 'selected' : ''}>${c.nome}</option>`;
+            });
+
+            const selectEst = document.getElementById('jogo-estadio');
+            selectEst.innerHTML = db.estadios.length ? '' : '<option value="">Cadastre um estádio</option>';
+            db.estadios.forEach(es => selectEst.innerHTML += `<option value="${es.id}">${es.nome} (${es.cidade})</option>`);
+
+            const selectMand = document.getElementById('jogo-mandante');
+            const selectVis = document.getElementById('jogo-visitante');
+            selectMand.innerHTML = db.clubes.length ? '' : '<option value="">Cadastre clubes</option>';
+            selectVis.innerHTML = db.clubes.length ? '' : '<option value="">Cadastre clubes</option>';
+            db.clubes.forEach(c => {
+                selectMand.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+                selectVis.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+            });
+
+            // Campeonatos
+            document.getElementById('lista-campeonatos').innerHTML = db.campeonatos.map(c => `
+                <li class="py-3 flex justify-between items-center text-sm text-zinc-300">
+                    <span class="font-medium">${c.nome}</span>
+                    <div class="flex gap-2">
+                        <button onclick="editarCampeonato(${c.id})" class="text-blue-400 hover:text-blue-300"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deletar('campeonatos', ${c.id})" class="text-rose-400 hover:text-rose-300"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </li>
+            `).join('') || '<p class="text-zinc-500 text-sm">Nenhum campeonato cadastrado.</p>';
+
+            // Categorias
+            document.getElementById('lista-categorias').innerHTML = db.categorias.map(c => `
+                <li class="py-3 flex justify-between items-center text-sm text-zinc-300">
+                    <span class="font-medium">${c.nome}</span>
+                    <div class="flex gap-2">
+                        <button onclick="editarCategoria(${c.id})" class="text-blue-400 hover:text-blue-300"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deletar('categorias', ${c.id})" class="text-rose-400 hover:text-rose-300"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </li>
+            `).join('') || '<p class="text-zinc-500 text-sm">Nenhuma categoria cadastrada.</p>';
+
+            // Clubes
+            document.getElementById('lista-clubes').innerHTML = db.clubes.map(c => `
+                <div class="border border-zinc-800 rounded-xl p-3 bg-zinc-950 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        ${c.logo ? `<img src="${c.logo}" class="w-10 h-10 object-contain bg-zinc-900 p-1 rounded-lg">` : `<div class="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center font-bold text-xs text-zinc-400">C</div>`}
+                        <span class="font-bold text-sm text-white">${c.nome}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editarClube(${c.id})" class="text-blue-400 hover:text-blue-300 text-sm"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deletar('clubes', ${c.id})" class="text-rose-400 hover:text-rose-300 text-sm"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-zinc-500 text-sm sm:col-span-3">Nenhum clube cadastrado.</p>';
+
+            // Estádios
+            document.getElementById('lista-estadios').innerHTML = db.estadios.map(es => `
+                <div class="border border-zinc-800 rounded-xl p-3 bg-zinc-950 flex justify-between items-start">
+                    <div>
+                        <h3 class="font-bold text-sm text-white">${es.nome}</h3>
+                        <p class="text-xs text-zinc-400 mt-0.5"><i class="fa-solid fa-location-dot"></i> ${es.cidade}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editarEstadio(${es.id})" class="text-blue-400 hover:text-blue-300 text-sm"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deletar('estadios', ${es.id})" class="text-rose-400 hover:text-rose-300 text-sm"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-zinc-500 text-sm sm:col-span-3">Nenhum estádio cadastrado.</p>';
+
+            // Atletas e Pessoas
+            document.getElementById('lista-atletas').innerHTML = db.atletas.map(a => `
+                <div class="border border-zinc-800 rounded-xl p-4 bg-zinc-950 flex justify-between items-start">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-white">${a.nome}</h3>
+                            <span class="text-[10px] px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-orange-400 font-bold">${a.funcao || 'Atleta'}</span>
+                        </div>
+                        <p class="text-xs text-zinc-400 mt-0.5">${a.categoria || ''}</p>
+                        ${a.doc ? `<p class="text-xs text-zinc-400 mt-0.5"><i class="fa-solid fa-id-card"></i> Doc: ${a.doc}</p>` : ''}
+                        <p class="text-xs custom-text font-medium mt-1"><i class="fa-brands fa-whatsapp"></i> ${a.telefone}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editarAtleta(${a.id})" class="text-blue-400 hover:text-blue-300 text-sm"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deletar('atletas', ${a.id})" class="text-rose-400 hover:text-rose-300 text-sm"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-zinc-500 text-sm sm:col-span-2 md:col-span-3">Nenhum membro cadastrado.</p>';
+
+            // Filtragem de Jogos
+            const filtroCat = document.getElementById('filtro-jogos-cat').value;
+            const filtroPeriodo = document.getElementById('filtro-jogos-periodo').value;
+            const hoje = new Date();
+            hoje.setHours(0,0,0,0);
+
+            const jogosFiltrados = db.jogos.filter(j => {
+                if (filtroCat && j.categoria !== filtroCat) return false;
+                const dataJogo = new Date(j.data + 'T00:00:00');
+
+                if (filtroPeriodo === 'semana') {
+                    const diffDias = Math.ceil((dataJogo - hoje) / (1000 * 60 * 60 * 24));
+                    if (diffDias < 0 || diffDias > 7) return false;
+                } else if (filtroPeriodo === 'futuros') {
+                    if (dataJogo < hoje) return false;
+                }
+                return true;
+            });
+
+            // Jogos - Cartões Match Day com Manifesto e Check-in
+            document.getElementById('lista-jogos').innerHTML = jogosFiltrados.map(j => {
+                const totalPresencas = (j.presencas || []).length;
+                return `
+                    <div class="rounded-2xl bg-gradient-to-b from-zinc-950 to-zinc-900 border-2 custom-border p-5 shadow-2xl flex flex-col justify-between relative overflow-hidden">
+                        <div class="absolute -right-10 -top-10 w-32 h-32 custom-bg opacity-10 rounded-full blur-2xl pointer-events-none"></div>
+
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="custom-badge border text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">${j.campeonato} • ${j.categoria}</span>
+                                <div class="flex gap-2">
+                                    <button onclick="editarJogo(${j.id})" class="text-blue-400 hover:text-blue-300 text-sm"><i class="fa-solid fa-pen-to-square"></i></button>
+                                    <button onclick="deletar('jogos', ${j.id})" class="text-rose-400 hover:text-rose-300 text-sm"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center justify-between my-4 py-4 bg-zinc-950/80 px-4 rounded-xl border border-zinc-800">
+                                <div class="flex flex-col items-center gap-2 flex-1 text-center">
+                                    ${j.logoMandante ? `<img src="${j.logoMandante}" class="w-14 h-14 object-contain drop-shadow-md">` : `<div class="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center text-xs text-zinc-400 font-bold">M</div>`}
+                                    <span class="font-bold text-sm text-white tracking-wide">${j.mandante}</span>
+                                </div>
+                                <div class="px-2 text-center">
+                                    <span class="text-xs font-black italic tracking-widest custom-vs px-2.5 py-1 rounded-md border">VS</span>
+                                </div>
+                                <div class="flex flex-col items-center gap-2 flex-1 text-center">
+                                    ${j.logoVisitante ? `<img src="${j.logoVisitante}" class="w-14 h-14 object-contain drop-shadow-md">` : `<div class="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center text-xs text-zinc-400 font-bold">V</div>`}
+                                    <span class="font-bold text-sm text-white tracking-wide">${j.visitante}</span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-1.5 text-xs text-zinc-300 bg-zinc-950/40 p-3 rounded-xl border border-zinc-800/60">
+                                <p class="flex items-center gap-2"><i class="custom-text fa-regular fa-calendar w-4"></i> <strong class="text-white">${j.data.split('-').reverse().join('/')}</strong> às <strong class="text-white">${j.hora}</strong></p>
+                                <p class="flex items-center gap-2"><i class="custom-text fa-solid fa-building-user w-4"></i> Apresentação: <strong class="text-white">${j.horaApresentacao || '--:--'}</strong> (${j.localApresentacao || 'Local não definido'})</p>
+                                <p class="flex items-center gap-2"><i class="custom-text fa-solid fa-bus w-4"></i> Saída da Viagem: <strong class="text-white">${j.saida}</strong></p>
+                                <p class="flex items-center gap-2"><i class="custom-text fa-solid fa-location-dot w-4"></i> ${j.local}</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                                <div class="flex items-center justify-between text-xs bg-zinc-950 p-2.5 rounded-xl border border-zinc-800">
+                                    <span class="text-zinc-400 flex items-center gap-1.5"><i class="fa-solid fa-clipboard-user custom-text"></i> Presença:</span>
+                                    <button onclick="abrirModalPresenca(${j.id})" class="font-bold text-white bg-zinc-800 hover:bg-zinc-700 px-2.5 py-1 rounded-lg transition border border-zinc-700">
+                                        <span class="custom-text">${totalPresencas}</span> Confirmados
+                                    </button>
+                                </div>
+                                <div class="flex items-center justify-between text-xs bg-zinc-950 p-2.5 rounded-xl border border-zinc-800">
+                                    <span class="text-zinc-400 flex items-center gap-1.5"><i class="fa-solid fa-bus custom-text"></i> Transporte:</span>
+                                    <button onclick="abrirModalManifesto(${j.id})" class="font-bold text-white bg-zinc-800 hover:bg-zinc-700 px-3 py-1 rounded-lg transition border border-zinc-700 flex items-center gap-1">
+                                        <i class="fa-solid fa-file-pdf custom-text"></i> Manifesto
+                                    </button>
+                                </div>
+                            </div>
+
+                            ${j.orientacoes ? `
+                                <div class="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-200">
+                                    <p class="font-bold mb-1 flex items-center gap-1.5 text-amber-400"><i class="fa-solid fa-circle-exclamation"></i> Orientações Gerais:</p>
+                                    <p class="whitespace-pre-line text-zinc-300">${j.orientacoes}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-zinc-800 flex justify-end">
+                            <button onclick="enviarWhatsApp('${j.mandante}', '${j.visitante}', '${j.categoria}', '${j.data}', '${j.hora}', '${j.horaApresentacao || ''}', '${j.localApresentacao || ''}', '${j.saida}', '${j.local}', '${(j.orientacoes || '').replace(/'/g, "\\'")}')" class="custom-bg w-full text-white text-xs font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg tracking-wide uppercase">
+                                <i class="fa-brands fa-whatsapp text-base"></i> Compartilhar / Enviar Convocações
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<p class="text-zinc-500 text-sm md:col-span-2 text-center py-6">Nenhum jogo encontrado com os filtros selecionados.</p>';
+        }
+    </script>
+</body>
+</html>
