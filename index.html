@@ -920,9 +920,11 @@
             doc.text(`Capacidade (Lugares): ${man.lugares}`, 110, 45);
             doc.text(`Quilometragem Rodada: ${man.km}`, 110, 52);
 
-            // Passageiros cadastrados
+            // Passageiros cadastrados e ordenados alfabeticamente
             const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : db.atletas.map(a => a.id);
             const passageiros = db.atletas.filter(a => passageirosIds.includes(a.id));
+            
+            passageiros.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 
             const tableData = passageiros.map((p, index) => [
                 index + 1,
@@ -1074,7 +1076,9 @@
             if (!jogo.presencas) jogo.presencas = [];
 
             const container = document.getElementById('conteudo-presenca');
-            const atletasList = db.atletas;
+            
+            // Ordenação alfabética dos membros na lista de check-in
+            const atletasList = [...db.atletas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 
             if (atletasList.length === 0) {
                 container.innerHTML = `<p class="text-zinc-400 text-center py-6">Nenhum membro cadastrado no sistema.</p>`;
@@ -1084,7 +1088,7 @@
                         Confronto: <strong class="text-white">${jogo.mandante} x ${jogo.visitante}</strong><br>
                         Categoria: <span class="custom-text font-bold">${jogo.categoria}</span>
                     </div>
-                    <div class="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+                    <div class="space-y-2 max-h-[50vh] overflow-y-auto pr-1" id="lista-presenca-scroll">
                         ${atletasList.map(a => {
                             const confirmado = jogo.presencas.includes(a.id);
                             return `
@@ -1124,8 +1128,19 @@
             } else {
                 jogo.presencas.push(atletaId);
             }
+
+            // Salva a posição atual da barra de rolagem antes de atualizar a tela
+            const scrollEl = document.getElementById('lista-presenca-scroll');
+            const scrollPos = scrollEl ? scrollEl.scrollTop : 0;
+
             salvarDados();
             abrirModalPresenca(jogoAtualPresencaId);
+
+            // Restaura a posição da barra de rolagem instantaneamente
+            const newScrollEl = document.getElementById('lista-presenca-scroll');
+            if (newScrollEl) {
+                newScrollEl.scrollTop = scrollPos;
+            }
         }
 
         // --- CAMPEONATOS ---
