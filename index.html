@@ -12,11 +12,12 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-    <!-- Bibliotecas para Exportação e Importação (jsPDF, SheetJS & PDF.js) -->
+    <!-- Bibliotecas para Exportação, Importação & Geração de Imagem (jsPDF, SheetJS, PDF.js & html2canvas) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
         if (typeof pdfjsLib !== 'undefined') {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -549,7 +550,6 @@
             usuarios: []
         };
 
-        // Carregar configurações locais na tela de login instantaneamente
         window.addEventListener('DOMContentLoaded', () => {
             carregarConfigLogin();
             ouvinteTempoRealInicial();
@@ -575,7 +575,6 @@
                     }
                     if (!db.usuarios) db.usuarios = [];
                     
-                    // Sincronizar cache local para a tela de login
                     if (db.config.logoClube) localStorage.setItem('fc_logo', db.config.logoClube);
                     if (db.config.nomeClube) localStorage.setItem('fc_nomeClube', db.config.nomeClube);
                     carregarConfigLogin();
@@ -598,7 +597,6 @@
             const erroEl = document.getElementById('login-erro');
 
             if (!db.usuarios || db.usuarios.length === 0) {
-                // Se nenhum usuário foi cadastrado ainda, permite criar senha mestre inicial
                 const senhaSalva = localStorage.getItem('fc_senha');
                 if (!senhaSalva) {
                     localStorage.setItem('fc_senha', senhaInput);
@@ -710,6 +708,25 @@
             }
         }
 
+        // --- GERAR IMAGEM DO CARD (POSTER LIMPO COM LISTA DE CONVOCADOS) ---
+        function gerarImagemCard(jogoId) {
+            const posterEl = document.getElementById(`poster-jogo-${jogoId}`);
+            if (!posterEl) return;
+
+            html2canvas(posterEl, {
+                backgroundColor: '#09090b',
+                scale: 2,
+                useCORS: true
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `card_jogo_${jogoId}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                alert("Erro ao gerar imagem do card: " + err.message);
+            });
+        }
+
         // --- CONFIGURAÇÕES / PERSONALIZAÇÃO ---
         function salvarConfigApp(e) {
             e.preventDefault();
@@ -730,7 +747,7 @@
             });
         }
 
-        // --- GESTÃO DE USUÁRIOS E PERMISSÕES (CORRIGIDO) ---
+        // --- GESTÃO DE USUÁRIOS E PERMISSÕES ---
         function salvarUsuarioSistema(e) {
             e.preventDefault();
             const usuario = document.getElementById('novo-user-nome').value.trim();
@@ -1588,19 +1605,6 @@
             }
         }
 
-        function enviarWhatsApp(mandante, visitante, categoria, data, hora, horaApresentacao, localApresentacao, saida, local, orientacoes) {
-            const nomeClube = db.config.nomeClube || 'Clube';
-            const dataFmt = data.split('-').reverse().join('/');
-            let mensagem = `🚨 *${nomeClube.toUpperCase()} - CONVOCAÇÃO* 🚨%0A%0A⚽ *${mandante}* 🆚 *${visitante}*%0A🏆 Competição: *${categoria}*%0A%0A📅 Data: *${dataFmt}* | Início: *${hora}*%0A📍 Local do Jogo: *${local}*%0A%0A⏰ *LOGÍSTICA:*%0A• Apresentação: *${horaApresentacao || 'N/I'}* em *${localApresentacao || 'Local não informado'}*%0A• Saída da Viagem: *${saida}*`;
-            
-            if (orientacoes) {
-                mensagem += `%0A%0A📌 *ORIENTAÇÕES GERAIS:*%0A${encodeURIComponent(orientacoes)}`;
-            }
-            
-            mensagem += `%0A%0A⚠️ *Comparecer uniformizado e com documentos em mãos!* Favor confirmar presença.`;
-            window.open(`https://api.whatsapp.com/send?text=${mensagem}`, '_blank');
-        }
-
         function atualizarInterface() {
             const config = db.config || { nomeClube: "Sociedade Esportiva Novo Horizonte", logoClube: "", corTema: "#f97316" };
             const cor = config.corTema || '#f97316';
@@ -1632,7 +1636,6 @@
             document.getElementById('cfg-nome-clube').value = config.nomeClube;
             document.getElementById('cfg-cor-tema').value = cor;
 
-            // Lista de usuários cadastrados
             const listaUsersEl = document.getElementById('lista-usuarios-sistema');
             if (db.usuarios && db.usuarios.length > 0) {
                 listaUsersEl.innerHTML = db.usuarios.map(u => `
@@ -1680,7 +1683,6 @@
                 selectVis.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
             });
 
-            // Campeonatos
             document.getElementById('lista-campeonatos').innerHTML = db.campeonatos.map(c => `
                 <li class="py-3 flex justify-between items-center text-sm text-zinc-300">
                     <span class="font-medium">${c.nome}</span>
@@ -1691,7 +1693,6 @@
                 </li>
             `).join('') || '<p class="text-zinc-500 text-sm">Nenhum campeonato cadastrado.</p>';
 
-            // Categorias
             document.getElementById('lista-categorias').innerHTML = db.categorias.map(c => `
                 <li class="py-3 flex justify-between items-center text-sm text-zinc-300">
                     <span class="font-medium">${c.nome}</span>
@@ -1702,7 +1703,6 @@
                 </li>
             `).join('') || '<p class="text-zinc-500 text-sm">Nenhuma categoria cadastrada.</p>';
 
-            // Clubes
             document.getElementById('lista-clubes').innerHTML = db.clubes.map(c => `
                 <div class="border border-zinc-800 rounded-xl p-3 bg-zinc-950 flex justify-between items-center">
                     <div class="flex items-center gap-3">
@@ -1716,7 +1716,6 @@
                 </div>
             `).join('') || '<p class="text-zinc-500 text-sm sm:col-span-3">Nenhum clube cadastrado.</p>';
 
-            // Estádios
             document.getElementById('lista-estadios').innerHTML = db.estadios.map(es => `
                 <div class="border border-zinc-800 rounded-xl p-3 bg-zinc-950 flex justify-between items-start">
                     <div>
@@ -1730,7 +1729,6 @@
                 </div>
             `).join('') || '<p class="text-zinc-500 text-sm sm:col-span-3">Nenhum estádio cadastrado.</p>';
 
-            // Atletas e Pessoas
             document.getElementById('lista-atletas').innerHTML = db.atletas.map(a => `
                 <div class="border border-zinc-800 rounded-xl p-4 bg-zinc-950 flex justify-between items-start">
                     <div>
@@ -1749,7 +1747,6 @@
                 </div>
             `).join('') || '<p class="text-zinc-500 text-sm sm:col-span-2 md:col-span-3">Nenhum membro cadastrado.</p>';
 
-            // Filtragem de Jogos
             const filtroCat = document.getElementById('filtro-jogos-cat').value;
             const filtroPeriodo = document.getElementById('filtro-jogos-periodo').value;
             const hoje = new Date();
@@ -1768,23 +1765,25 @@
                 return true;
             });
 
-            // Jogos - Cartões Match Day
+            // Jogos - Renderização com Área do Poster Limpa + Lista de Convocados
             document.getElementById('lista-jogos').innerHTML = jogosFiltrados.map(j => {
                 const totalPresencas = (j.presencas || []).length;
+                
+                // Obter atletas convocados (presenças confirmadas ou todos se nenhum check-in foi marcado)
+                const passageirosIds = (j.presencas && j.presencas.length > 0) ? j.presencas : db.atletas.map(a => a.id);
+                let atletasConvidados = db.atletas.filter(a => passageirosIds.includes(a.id) && (a.funcao || 'Atleta') === 'Atleta');
+                atletasConvidados.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+
                 return `
                     <div class="rounded-2xl bg-gradient-to-b from-zinc-950 to-zinc-900 border-2 custom-border p-5 shadow-2xl flex flex-col justify-between relative overflow-hidden">
-                        <div class="absolute -right-10 -top-10 w-32 h-32 custom-bg opacity-10 rounded-full blur-2xl pointer-events-none"></div>
-
-                        <div>
+                        
+                        <!-- ÁREA DO POSTER (Capturada perfeitamente na imagem PNG, sem botões de ação) -->
+                        <div id="poster-jogo-${j.id}" class="bg-zinc-950 p-4 rounded-xl border border-zinc-800/80">
                             <div class="flex justify-between items-start mb-3">
                                 <span class="custom-badge border text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">${j.campeonato} • ${j.categoria}</span>
-                                <div class="flex gap-2">
-                                    <button onclick="editarJogo(${j.id})" class="text-blue-400 hover:text-blue-300 text-sm"><i class="fa-solid fa-pen-to-square"></i></button>
-                                    <button onclick="deletar('jogos', ${j.id})" class="text-rose-400 hover:text-rose-300 text-sm"><i class="fa-solid fa-trash"></i></button>
-                                </div>
                             </div>
                             
-                            <div class="flex items-center justify-between my-4 py-4 bg-zinc-950/80 px-4 rounded-xl border border-zinc-800">
+                            <div class="flex items-center justify-between my-3 py-3 bg-zinc-900/90 px-4 rounded-xl border border-zinc-800">
                                 <div class="flex flex-col items-center gap-2 flex-1 text-center">
                                     ${j.logoMandante ? `<img src="${j.logoMandante}" class="w-14 h-14 object-contain drop-shadow-md">` : `<div class="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center text-xs text-zinc-400 font-bold">M</div>`}
                                     <span class="font-bold text-sm text-white tracking-wide">${j.mandante}</span>
@@ -1798,26 +1797,11 @@
                                 </div>
                             </div>
 
-                            <div class="space-y-1.5 text-xs text-zinc-300 bg-zinc-950/40 p-3 rounded-xl border border-zinc-800/60">
+                            <div class="space-y-1.5 text-xs text-zinc-300 bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
                                 <p class="flex items-center gap-2"><i class="custom-text fa-regular fa-calendar w-4"></i> <strong class="text-white">${j.data.split('-').reverse().join('/')}</strong> às <strong class="text-white">${j.hora}</strong></p>
                                 <p class="flex items-center gap-2"><i class="custom-text fa-solid fa-building-user w-4"></i> Apresentação: <strong class="text-white">${j.horaApresentacao || '--:--'}</strong> (${j.localApresentacao || 'Local não definido'})</p>
                                 <p class="flex items-center gap-2"><i class="custom-text fa-solid fa-bus w-4"></i> Saída da Viagem: <strong class="text-white">${j.saida}</strong></p>
                                 <p class="flex items-center gap-2"><i class="custom-text fa-solid fa-location-dot w-4"></i> ${j.local}</p>
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
-                                <div class="flex items-center justify-between sm:justify-center gap-2 text-xs bg-zinc-950 p-2.5 rounded-xl border border-zinc-800">
-                                    <span class="text-zinc-400"><i class="fa-solid fa-clipboard-user custom-text"></i></span>
-                                    <button onclick="abrirModalPresenca(${j.id})" class="font-bold text-white bg-zinc-800 hover:bg-zinc-700 px-2.5 py-1 rounded-lg transition border border-zinc-700">
-                                        <span class="custom-text">${totalPresencas}</span> Conf.
-                                    </button>
-                                </div>
-                                <button onclick="gerarPdfConvocacao(${j.id})" class="font-bold text-white bg-zinc-950 hover:bg-zinc-800 px-3 py-2 rounded-xl transition border border-zinc-800 flex items-center justify-center gap-1.5 text-xs shadow">
-                                    <i class="fa-solid fa-file-pdf custom-text"></i> Convocações PDF
-                                </button>
-                                <button onclick="abrirModalManifesto(${j.id})" class="font-bold text-white bg-zinc-950 hover:bg-zinc-800 px-3 py-2 rounded-xl transition border border-zinc-800 flex items-center justify-center gap-1.5 text-xs shadow">
-                                    <i class="fa-solid fa-file-pdf custom-text"></i> Manifesto PDF
-                                </button>
                             </div>
 
                             ${j.orientacoes ? `
@@ -1826,12 +1810,50 @@
                                     <p class="whitespace-pre-line text-zinc-300">${j.orientacoes}</p>
                                 </div>
                             ` : ''}
+
+                            <!-- LISTA DE ATLETAS CONVOCADOS INCLUÍDA NO POSTER -->
+                            <div class="mt-3 p-3 bg-zinc-900/70 border border-zinc-800 rounded-xl">
+                                <p class="font-bold text-xs text-white mb-2 uppercase tracking-wide flex items-center gap-1.5">
+                                    <i class="custom-text fa-solid fa-users"></i> Atletas Convocados (${atletasConvidados.length}):
+                                </p>
+                                ${atletasConvidados.length > 0 ? `
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-zinc-300 font-medium">
+                                        ${atletasConvidados.map((atleta, index) => `
+                                            <div class="truncate bg-zinc-950/40 px-2 py-1 rounded border border-zinc-800/50">
+                                                <span class="custom-text font-bold">${index + 1}.</span> ${atleta.nome}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : `<p class="text-[11px] text-zinc-500 italic">Nenhum atleta vinculado ou selecionado.</p>`}
+                            </div>
                         </div>
-                        <div class="mt-4 pt-3 border-t border-zinc-800 flex justify-end">
-                            <button onclick="enviarWhatsApp('${j.mandante}', '${j.visitante}', '${j.categoria}', '${j.data}', '${j.hora}', '${j.horaApresentacao || ''}', '${j.localApresentacao || ''}', '${j.saida}', '${j.local}', '${(j.orientacoes || '').replace(/'/g, "\\'")}')" class="custom-bg w-full text-white text-xs font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg tracking-wide uppercase">
-                                <i class="fa-brands fa-whatsapp text-base"></i> Compartilhar / Enviar Convocações
+
+                        <!-- BOTÕES DE GERENCIAMENTO (Ficam fora da imagem PNG gerada) -->
+                        <div class="mt-4 pt-3 border-t border-zinc-800 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <div class="flex gap-2">
+                                    <button onclick="editarJogo(${j.id})" class="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 bg-zinc-800 rounded border border-zinc-700"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
+                                    <button onclick="deletar('jogos', ${j.id})" class="text-rose-400 hover:text-rose-300 text-xs px-2 py-1 bg-zinc-800 rounded border border-zinc-700"><i class="fa-solid fa-trash"></i> Excluir</button>
+                                </div>
+                                <button onclick="abrirModalPresenca(${j.id})" class="text-xs bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-3 py-1 rounded border border-zinc-700">
+                                    <i class="custom-text fa-solid fa-clipboard-user"></i> Check-in (<span class="custom-text">${totalPresencas}</span>)
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="gerarPdfConvocacao(${j.id})" class="bg-zinc-950 hover:bg-zinc-800 text-zinc-300 text-xs py-2 px-3 rounded-xl border border-zinc-800 font-bold flex items-center justify-center gap-1.5 transition">
+                                    <i class="fa-solid fa-file-pdf custom-text"></i> PDF Convocações
+                                </button>
+                                <button onclick="abrirModalManifesto(${j.id})" class="bg-zinc-950 hover:bg-zinc-800 text-zinc-300 text-xs py-2 px-3 rounded-xl border border-zinc-800 font-bold flex items-center justify-center gap-1.5 transition">
+                                    <i class="fa-solid fa-file-pdf custom-text"></i> PDF Manifesto
+                                </button>
+                            </div>
+
+                            <button onclick="gerarImagemCard(${j.id})" class="custom-bg w-full text-white text-xs font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg tracking-wide uppercase">
+                                <i class="fa-solid fa-image text-base"></i> Baixar Imagem do Card para o WhatsApp
                             </button>
                         </div>
+
                     </div>
                 `;
             }).join('') || '<p class="text-zinc-500 text-sm md:col-span-2 text-center py-6">Nenhum jogo encontrado com os filtros selecionados.</p>';
