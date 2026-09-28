@@ -39,21 +39,27 @@
     <div id="login-screen" class="fixed inset-0 bg-zinc-950 flex items-center justify-center z-50 p-4">
         <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl shadow-2xl w-full max-w-md">
             <div class="text-center mb-6">
-                <div class="custom-badge w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl border">
-                    <i class="fa-solid fa-shield-halved"></i>
+                <div id="login-logo-container" class="mb-3 flex justify-center">
+                    <div class="custom-badge w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-2xl border shadow-lg">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
                 </div>
-                <h2 id="login-titulo" class="text-xl font-bold text-white">Acesso Restrito</h2>
-                <p id="login-sub" class="text-xs text-zinc-400 mt-1">Digite sua senha para acessar o painel</p>
+                <h2 id="login-titulo" class="text-xl font-bold text-white">Sociedade Esportiva Novo Horizonte</h2>
+                <p id="login-sub" class="text-xs text-zinc-400 mt-1">Digite suas credenciais para acessar o painel</p>
             </div>
             
             <form onsubmit="autenticar(event)" class="space-y-4">
                 <div>
+                    <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Nome de Usuário</label>
+                    <input type="text" id="input-usuario" placeholder="Ex: admin ou seu nome" class="w-full border border-zinc-700 rounded-lg p-3 bg-zinc-800 text-sm text-white focus:ring-2 focus:ring-orange-500 outline-none" required>
+                </div>
+                <div>
                     <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Senha</label>
                     <input type="password" id="input-senha" placeholder="Sua senha" class="w-full border border-zinc-700 rounded-lg p-3 bg-zinc-800 text-sm text-white focus:ring-2 focus:ring-orange-500 outline-none" required>
                 </div>
-                <button type="submit" id="btn-submit-auth" class="custom-bg w-full text-white font-medium p-3 rounded-lg text-sm shadow transition">Entrar</button>
+                <button type="submit" id="btn-submit-auth" class="custom-bg w-full text-white font-medium p-3 rounded-lg text-sm shadow transition">Entrar no Sistema</button>
             </form>
-            <div id="login-erro" class="text-rose-400 text-xs text-center mt-3 hidden font-medium">Senha incorreta!</div>
+            <div id="login-erro" class="text-rose-400 text-xs text-center mt-3 hidden font-medium">Usuário ou senha incorretos!</div>
         </div>
     </div>
 
@@ -72,7 +78,7 @@
                         <h1 id="header-club-name" class="text-base font-bold flex items-center gap-2">
                             Sociedade Esportiva Novo Horizonte
                         </h1>
-                        <p class="text-[11px] text-zinc-400 font-medium">Painel Oficial de Gestão e Match Day</p>
+                        <p class="text-[11px] text-zinc-400 font-medium">Painel Oficial de Gestão e Match Day <span id="user-role-badge" class="ml-2 px-2 py-0.5 bg-zinc-900 border border-zinc-700 text-orange-400 rounded text-[10px]"></span></p>
                     </div>
                 </div>
 
@@ -313,14 +319,14 @@
                     <h2 class="text-lg font-bold mb-4 text-white flex items-center gap-2">
                         <i class="custom-text fa-solid fa-gear"></i> Personalização do Aplicativo e Clube
                     </h2>
-                    <p class="text-xs text-zinc-400 mb-6">Defina o nome da sua entidade, envie o escudo oficial e escolha a cor de destaque exata que preferir.</p>
+                    <p class="text-xs text-zinc-400 mb-6">Defina o nome da sua entidade, envie o escudo oficial (que aparecerá na tela de login e no cabeçalho) e escolha a cor de destaque exata que preferir.</p>
                     <form id="form-config" onsubmit="salvarConfigApp(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                         <div>
                             <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Nome do Clube / Entidade</label>
                             <input type="text" id="cfg-nome-clube" placeholder="Ex: S.E. Novo Horizonte" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Escudo / Logo Principal do App</label>
+                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Escudo / Logo Principal (Login & Cabeçalho)</label>
                             <input type="file" id="cfg-logo-clube" accept="image/*" class="w-full text-xs text-zinc-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-300">
                         </div>
                         <div>
@@ -334,6 +340,29 @@
                             <button type="submit" class="custom-bg w-full text-white font-medium px-6 py-2.5 rounded-lg text-sm shadow transition">Salvar Personalização</button>
                         </div>
                     </form>
+                </div>
+
+                <!-- GERENCIAMENTO DE USUÁRIOS E PERMISSÕES -->
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-base font-bold mb-3 text-white flex items-center gap-2">
+                        <i class="custom-text fa-solid fa-users-gear"></i> Gerenciamento de Usuários e Permissões
+                    </h3>
+                    <p class="text-xs text-zinc-400 mb-4">Cadastre novos usuários informando usuário, senha e escolhendo o nível de acesso exato (Administrador, Coordenador, Visualizador).</p>
+                    
+                    <form onsubmit="salvarUsuarioSistema(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                        <input type="text" id="novo-user-nome" placeholder="Nome de Usuário (Ex: joao)" class="border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-xs text-white" required>
+                        <input type="password" id="novo-user-senha" placeholder="Senha de Acesso" class="border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-xs text-white" required>
+                        <select id="novo-user-permissao" class="border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-xs text-white" required>
+                            <option value="Administrador">Administrador (Acesso Total)</option>
+                            <option value="Coordenador">Coordenador (Gestão de Jogos/Elenco)</option>
+                            <option value="Visualizador">Visualizador (Apenas Leitura)</option>
+                        </select>
+                        <div class="sm:col-span-3 flex justify-end">
+                            <button type="submit" class="custom-bg text-white font-medium px-4 py-2 rounded-lg text-xs shadow">Adicionar Usuário</button>
+                        </div>
+                    </form>
+
+                    <div id="lista-usuarios-sistema" class="space-y-2"></div>
                 </div>
             </section>
         </main>
@@ -505,44 +534,6 @@
         firebase.initializeApp(firebaseConfig);
         const firestore = firebase.firestore();
 
-        const senhaSalva = localStorage.getItem('fc_senha');
-        if (!senhaSalva) {
-            document.getElementById('login-titulo').innerText = "Criar Senha de Acesso";
-            document.getElementById('login-sub').innerText = "Defina uma senha para proteger seus dados";
-            document.getElementById('btn-submit-auth').innerText = "Cadastrar Senha";
-        }
-
-        function autenticar(e) {
-            e.preventDefault();
-            const senhaInput = document.getElementById('input-senha').value;
-            const erroEl = document.getElementById('login-erro');
-
-            if (!senhaSalva) {
-                localStorage.setItem('fc_senha', senhaInput);
-                liberarApp();
-            } else {
-                if (senhaInput === senhaSalva) {
-                    liberarApp();
-                } else {
-                    erroEl.classList.remove('hidden');
-                    document.getElementById('input-senha').value = '';
-                }
-            }
-        }
-
-        function liberarApp() {
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('app-screen').classList.remove('hidden');
-            ouvinteTempoReal();
-        }
-
-        function sair() {
-            document.getElementById('app-screen').classList.add('hidden');
-            document.getElementById('login-screen').classList.remove('hidden');
-            document.getElementById('input-senha').value = '';
-            document.getElementById('login-erro').classList.add('hidden');
-        }
-
         let db = {
             config: {
                 nomeClube: "Sociedade Esportiva Novo Horizonte",
@@ -554,23 +545,101 @@
             clubes: [],
             estadios: [],
             atletas: [],
-            jogos: []
+            jogos: [],
+            usuarios: []
         };
 
-        function ouvinteTempoReal() {
+        // Carregar configurações locais na tela de login instantaneamente
+        window.addEventListener('DOMContentLoaded', () => {
+            carregarConfigLogin();
+            ouvinteTempoRealInicial();
+        });
+
+        function carregarConfigLogin() {
+            const savedLogo = localStorage.getItem('fc_logo');
+            const savedNome = localStorage.getItem('fc_nomeClube');
+            if (savedLogo) {
+                document.getElementById('login-logo-container').innerHTML = `<img src="${savedLogo}" class="w-16 h-16 object-contain rounded-2xl border border-zinc-800 bg-zinc-950 p-1 shadow-lg">`;
+            }
+            if (savedNome) {
+                document.getElementById('login-titulo').innerText = savedNome;
+            }
+        }
+
+        function ouvinteTempoRealInicial() {
             firestore.collection('sistema').doc('dados_futebol').onSnapshot((doc) => {
                 if (doc.exists) {
                     db = doc.data();
                     if (!db.config) {
                         db.config = { nomeClube: "Sociedade Esportiva Novo Horizonte", logoClube: "", corTema: "#f97316" };
                     }
-                    atualizarInterface();
+                    if (!db.usuarios) db.usuarios = [];
+                    
+                    // Sincronizar cache local para a tela de login
+                    if (db.config.logoClube) localStorage.setItem('fc_logo', db.config.logoClube);
+                    if (db.config.nomeClube) localStorage.setItem('fc_nomeClube', db.config.nomeClube);
+                    carregarConfigLogin();
+
+                    if (!document.getElementById('app-screen').classList.contains('hidden')) {
+                        atualizarInterface();
+                    }
                 } else {
                     salvarDados();
                 }
             }, (error) => {
                 console.error("Erro ao sincronizar com o Firebase:", error);
             });
+        }
+
+        function autenticar(e) {
+            e.preventDefault();
+            const usuarioInput = document.getElementById('input-usuario').value.trim();
+            const senhaInput = document.getElementById('input-senha').value;
+            const erroEl = document.getElementById('login-erro');
+
+            if (!db.usuarios || db.usuarios.length === 0) {
+                // Se nenhum usuário foi cadastrado ainda, permite criar senha mestre inicial
+                const senhaSalva = localStorage.getItem('fc_senha');
+                if (!senhaSalva) {
+                    localStorage.setItem('fc_senha', senhaInput);
+                    liberarApp('Administrador', usuarioInput || 'Admin');
+                } else {
+                    if (senhaInput === senhaSalva) {
+                        liberarApp('Administrador', usuarioInput || 'Admin');
+                    } else {
+                        erroEl.classList.remove('hidden');
+                        document.getElementById('input-senha').value = '';
+                    }
+                }
+            } else {
+                const userFound = db.usuarios.find(u => u.usuario.toLowerCase() === usuarioInput.toLowerCase() && u.senha === senhaInput);
+                if (userFound) {
+                    liberarApp(userFound.permissao, userFound.usuario);
+                } else {
+                    erroEl.classList.remove('hidden');
+                    document.getElementById('input-senha').value = '';
+                }
+            }
+        }
+
+        function liberarApp(permissao, usuario) {
+            sessionStorage.setItem('fc_permissao', permissao);
+            sessionStorage.setItem('fc_usuario_logado', usuario);
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+            document.getElementById('user-role-badge').innerText = `${usuario} (${permissao})`;
+            atualizarInterface();
+        }
+
+        function sair() {
+            sessionStorage.clear();
+            document.getElementById('app-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('input-usuario').value = '';
+            document.getElementById('input-senha').value = '';
+            document.getElementById('login-erro').classList.add('hidden');
+            carregarConfigLogin();
         }
 
         function salvarDados() {
@@ -652,10 +721,47 @@
                 db.config.corTema = corTema;
                 if (logo) {
                     db.config.logoClube = logo;
+                    localStorage.setItem('fc_logo', logo);
                 }
+                localStorage.setItem('fc_nomeClube', nomeClube);
                 salvarDados();
+                carregarConfigLogin();
                 alert("Personalização salva com sucesso!");
             });
+        }
+
+        // --- GESTÃO DE USUÁRIOS E PERMISSÕES (CORRIGIDO) ---
+        function salvarUsuarioSistema(e) {
+            e.preventDefault();
+            const usuario = document.getElementById('novo-user-nome').value.trim();
+            const senha = document.getElementById('novo-user-senha').value;
+            const permissao = document.getElementById('novo-user-permissao').value;
+
+            if (!db.usuarios) db.usuarios = [];
+
+            if (db.usuarios.some(u => u.usuario.toLowerCase() === usuario.toLowerCase())) {
+                alert("Já existe um usuário cadastrado com este nome!");
+                return;
+            }
+
+            db.usuarios.push({
+                id: Date.now(),
+                usuario,
+                senha,
+                permissao
+            });
+
+            salvarDados();
+            document.getElementById('novo-user-nome').value = '';
+            document.getElementById('novo-user-senha').value = '';
+            alert("Usuário cadastrado com sucesso!");
+        }
+
+        function deletarUsuario(id) {
+            if (confirm("Deseja realmente excluir este usuário?")) {
+                db.usuarios = db.usuarios.filter(u => u.id !== id);
+                salvarDados();
+            }
         }
 
         // --- IMPORTAÇÃO / COLAGEM EM MASSA ---
@@ -831,7 +937,7 @@
             return membros.filter(m => m.nome && m.nome.length > 2);
         }
 
-        // --- GERAÇÃO DE PDF DE CONVOCAÇÕES (PÁGINA ÚNICA, ATLETAS, ORDEM ALFABÉTICA & ORIENTAÇÕES EM DESTAQUE) ---
+        // --- GERAÇÃO DE PDF DE CONVOCAÇÕES (PÁGINA ÚNICA) ---
         function gerarPdfConvocacao(jogoId) {
             const jogo = db.jogos.find(j => j.id === jogoId);
             if (!jogo) return;
@@ -878,7 +984,6 @@
                 startYTable = 57 + boxHeight + 4;
             }
 
-            // Filtro: Apenas atletas (sem diretoria ou comissão) e ordenados alfabeticamente
             const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : db.atletas.map(a => a.id);
             let atletasConvidados = db.atletas.filter(a => passageirosIds.includes(a.id) && (a.funcao || 'Atleta') === 'Atleta');
             
@@ -1000,7 +1105,6 @@
             doc.text(`Lugares: ${man.lugares}`, 110, 35);
             doc.text(`KM: ${man.km}`, 110, 41);
 
-            // Passageiros cadastrados e ordenados alfabeticamente
             const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : db.atletas.map(a => a.id);
             const passageiros = db.atletas.filter(a => passageirosIds.includes(a.id));
             
@@ -1013,7 +1117,6 @@
                 p.doc || 'Não informado'
             ]);
 
-            // Adicionar 5 espaços/linhas em branco para preenchimento manual
             for (let i = 1; i <= 5; i++) {
                 tableData.push([
                     passageiros.length + i,
@@ -1160,7 +1263,6 @@
             if (!jogo.presencas) jogo.presencas = [];
 
             const container = document.getElementById('conteudo-presenca');
-            
             const atletasList = [...db.atletas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 
             if (atletasList.length === 0) {
@@ -1530,6 +1632,22 @@
             document.getElementById('cfg-nome-clube').value = config.nomeClube;
             document.getElementById('cfg-cor-tema').value = cor;
 
+            // Lista de usuários cadastrados
+            const listaUsersEl = document.getElementById('lista-usuarios-sistema');
+            if (db.usuarios && db.usuarios.length > 0) {
+                listaUsersEl.innerHTML = db.usuarios.map(u => `
+                    <div class="flex justify-between items-center p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs">
+                        <div>
+                            <strong class="text-white">${u.usuario}</strong> 
+                            <span class="ml-2 px-2 py-0.5 bg-zinc-800 text-orange-400 rounded">${u.permissao}</span>
+                        </div>
+                        <button onclick="deletarUsuario(${u.id})" class="text-rose-400 hover:text-rose-300"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `).join('');
+            } else {
+                listaUsersEl.innerHTML = `<p class="text-xs text-zinc-500">Nenhum usuário adicional cadastrado (utilizando senha padrão).</p>`;
+            }
+
             const selectCamp = document.getElementById('jogo-camp');
             selectCamp.innerHTML = db.campeonatos.length ? '' : '<option value="">Cadastre um campeonato</option>';
             db.campeonatos.forEach(c => selectCamp.innerHTML += `<option value="${c.nome}">${c.nome}</option>`);
@@ -1650,7 +1768,7 @@
                 return true;
             });
 
-            // Jogos - Cartões Match Day com Convocações PDF, Manifesto e Check-in
+            // Jogos - Cartões Match Day
             document.getElementById('lista-jogos').innerHTML = jogosFiltrados.map(j => {
                 const totalPresencas = (j.presencas || []).length;
                 return `
