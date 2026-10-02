@@ -230,7 +230,7 @@
                     </form>
                 </div>
                 <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg">
-                    <h2 class="text-lg font-bold mb-4 text-white">Categorias Cadastradas</h2>
+                    <h2 class="text-lg font-bold mb-4 text-white">Categorias Cadastradas (Ordem Crescente)</h2>
                     <ul id="lista-categorias" class="divide-y divide-zinc-800"></ul>
                 </div>
             </section>
@@ -309,7 +309,22 @@
                 </div>
 
                 <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg">
-                    <h2 class="text-lg font-bold mb-4 text-white">Lista de Membros Cadastrados</h2>
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-4">
+                        <h2 class="text-lg font-bold text-white">Lista de Membros Cadastrados</h2>
+                        <div class="flex flex-wrap gap-2 items-center w-full lg:w-auto">
+                            <input type="text" id="filtro-atleta-busca" placeholder="Buscar por nome..." oninput="atualizarInterface()" class="bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 rounded-xl px-3 py-2 flex-1 sm:flex-none">
+                            <select id="filtro-atleta-cat" onchange="atualizarInterface()" class="bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 rounded-xl px-3 py-2 flex-1 sm:flex-none">
+                                <option value="">Todas as Categorias</option>
+                            </select>
+                            <select id="filtro-atleta-funcao" onchange="atualizarInterface()" class="bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 rounded-xl px-3 py-2 flex-1 sm:flex-none">
+                                <option value="">Todas as Funções</option>
+                                <option value="Atleta">Atleta</option>
+                                <option value="Comissão Técnica">Comissão Técnica</option>
+                                <option value="Diretoria">Diretoria</option>
+                                <option value="Diversos">Diversos</option>
+                            </select>
+                        </div>
+                    </div>
                     <div id="lista-atletas" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
                 </div>
             </section>
@@ -1285,8 +1300,10 @@
             if (atletasList.length === 0) {
                 container.innerHTML = `<p class="text-zinc-400 text-center py-6">Nenhum membro cadastrado no sistema.</p>`;
             } else {
-                // Agrupar atletas por categoria
+                // Agrupar atletas por categoria ordenada
                 const categoriasMap = {};
+                db.categorias.forEach(c => { categoriasMap[c.nome] = []; });
+                
                 atletasList.forEach(a => {
                     const cat = a.categoria || 'Sem Categoria';
                     if (!categoriasMap[cat]) categoriasMap[cat] = [];
@@ -1306,6 +1323,7 @@
                     <div class="space-y-4 max-h-[55vh] overflow-y-auto pr-1" id="lista-presenca-scroll">
                         ${Object.keys(categoriasMap).map(catName => {
                             const atletasCat = categoriasMap[catName];
+                            if (atletasCat.length === 0) return '';
                             const isGameCat = catName === jogo.categoria;
                             return `
                                 <div class="bg-zinc-950/60 border ${isGameCat ? 'border-orange-500/40' : 'border-zinc-800'} rounded-xl p-3">
@@ -1696,6 +1714,11 @@
             document.getElementById('cfg-nome-clube').value = config.nomeClube;
             document.getElementById('cfg-cor-tema').value = cor;
 
+            // Ordenar categorias em ordem crescente alfanumérica
+            if (db.categorias) {
+                db.categorias.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { numeric: true, sensitivity: 'base' }));
+            }
+
             const listaUsersEl = document.getElementById('lista-usuarios-sistema');
             if (db.usuarios && db.usuarios.length > 0) {
                 listaUsersEl.innerHTML = db.usuarios.map(u => `
@@ -1723,11 +1746,20 @@
             selectAtletaCat.innerHTML = db.categorias.length ? '' : '<option value="">Sem categoria específica</option>';
             db.categorias.forEach(c => selectAtletaCat.innerHTML += `<option value="${c.nome}">${c.nome}</option>`);
 
+            // Filtro de Categoria em Jogos
             const filtroCatEl = document.getElementById('filtro-jogos-cat');
             const catSelecionadaAtual = filtroCatEl.value;
             filtroCatEl.innerHTML = `<option value="">Todas as Categorias</option>`;
             db.categorias.forEach(c => {
                 filtroCatEl.innerHTML += `<option value="${c.nome}" ${c.nome === catSelecionadaAtual ? 'selected' : ''}>${c.nome}</option>`;
+            });
+
+            // Filtro de Categoria na Aba Elenco
+            const filtroAtletaCatEl = document.getElementById('filtro-atleta-cat');
+            const catAtletaSel = filtroAtletaCatEl.value;
+            filtroAtletaCatEl.innerHTML = `<option value="">Todas as Categorias</option>`;
+            db.categorias.forEach(c => {
+                filtroAtletaCatEl.innerHTML += `<option value="${c.nome}" ${c.nome === catAtletaSel ? 'selected' : ''}>${c.nome}</option>`;
             });
 
             const selectEst = document.getElementById('jogo-estadio');
@@ -1789,7 +1821,21 @@
                 </div>
             `).join('') || '<p class="text-zinc-500 text-sm sm:col-span-3">Nenhum estádio cadastrado.</p>';
 
-            document.getElementById('lista-atletas').innerHTML = db.atletas.map(a => `
+            // Filtragem e ordenação de membros (Elenco)
+            const buscaAtleta = document.getElementById('filtro-atleta-busca').value.toLowerCase();
+            const filtroCatAtleta = document.getElementById('filtro-atleta-cat').value;
+            const filtroFuncaoAtleta = document.getElementById('filtro-atleta-funcao').value;
+
+            const atletasFiltrados = db.atletas.filter(a => {
+                if (buscaAtleta && !a.nome.toLowerCase().includes(buscaAtleta)) return false;
+                if (filtroCatAtleta && (a.categoria || 'Sem Categoria') !== filtroCatAtleta) return false;
+                if (filtroFuncaoAtleta && (a.funcao || 'Atleta') !== filtroFuncaoAtleta) return false;
+                return true;
+            });
+
+            atletasFiltrados.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+
+            document.getElementById('lista-atletas').innerHTML = atletasFiltrados.map(a => `
                 <div class="border border-zinc-800 rounded-xl p-4 bg-zinc-950 flex justify-between items-start">
                     <div>
                         <div class="flex items-center gap-2">
@@ -1805,7 +1851,7 @@
                         <button onclick="deletar('atletas', ${a.id})" class="text-rose-400 hover:text-rose-300 text-sm"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </div>
-            `).join('') || '<p class="text-zinc-500 text-sm sm:col-span-2 md:col-span-3">Nenhum membro cadastrado.</p>';
+            `).join('') || '<p class="text-zinc-500 text-sm sm:col-span-2 md:col-span-3 text-center py-4">Nenhum membro encontrado com os filtros aplicados.</p>';
 
             const filtroCat = document.getElementById('filtro-jogos-cat').value;
             const filtroPeriodo = document.getElementById('filtro-jogos-periodo').value;
