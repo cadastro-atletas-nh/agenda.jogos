@@ -395,18 +395,18 @@
         </div>
     </div>
 
-    <!-- MODAL DE CONTROLE DE PRESENÇA (CHECK-IN) -->
+    <!-- MODAL DE CONTROLE DE PRESENÇA (CHECK-IN SEPARADO POR CATEGORIAS) -->
     <div id="modal-presenca" class="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
-        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
             <div class="p-4 bg-zinc-950 border-b border-zinc-800 flex justify-between items-center">
                 <h3 class="font-bold text-white text-base flex items-center gap-2">
-                    <i class="custom-text fa-solid fa-clipboard-user"></i> Controle de Presença (Check-in)
+                    <i class="custom-text fa-solid fa-clipboard-user"></i> Convocação e Check-in por Categoria
                 </h3>
                 <button onclick="fecharModalPresenca()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg transition">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div id="conteudo-presenca" class="p-6 overflow-y-auto space-y-3 text-sm text-zinc-200"></div>
+            <div id="conteudo-presenca" class="p-6 overflow-y-auto space-y-4 text-sm text-zinc-200"></div>
         </div>
     </div>
 
@@ -1001,7 +1001,7 @@
                 startYTable = 57 + boxHeight + 4;
             }
 
-            const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : db.atletas.map(a => a.id);
+            const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : [];
             let atletasConvidados = db.atletas.filter(a => passageirosIds.includes(a.id) && (a.funcao || 'Atleta') === 'Atleta');
             
             atletasConvidados.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
@@ -1060,9 +1060,9 @@
             document.getElementById('man-lugares').value = man.lugares;
             document.getElementById('man-km').value = man.km;
 
-            const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : db.atletas.map(a => a.id);
+            const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : [];
             const passageirosCount = passageirosIds.length;
-            document.getElementById('man-lista-passageiros-resumo').innerHTML = `Total de ${passageirosCount} passageiros selecionados (${(jogo.presencas && jogo.presencas.length > 0) ? 'Check-in confirmado' : 'Elenco Completo'}) + 5 espaços em branco.`;
+            document.getElementById('man-lista-passageiros-resumo').innerHTML = `Total de ${passageirosCount} passageiros selecionados (Check-in confirmado) + 5 espaços em branco.`;
 
             document.getElementById('modal-manifesto').classList.remove('hidden');
         }
@@ -1122,7 +1122,7 @@
             doc.text(`Lugares: ${man.lugares}`, 110, 35);
             doc.text(`KM: ${man.km}`, 110, 41);
 
-            const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : db.atletas.map(a => a.id);
+            const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : [];
             const passageiros = db.atletas.filter(a => passageirosIds.includes(a.id));
             
             passageiros.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
@@ -1270,7 +1270,7 @@
             XLSX.writeFile(workbook, `relatorio_jogos_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
-        // --- CONTROLE DE PRESENÇA (CHECK-IN) ---
+        // --- CONTROLE DE PRESENÇA (CHECK-IN SEPARADO POR CATEGORIAS) ---
         let jogoAtualPresencaId = null;
         function abrirModalPresenca(jogoId) {
             jogoAtualPresencaId = jogoId;
@@ -1285,27 +1285,59 @@
             if (atletasList.length === 0) {
                 container.innerHTML = `<p class="text-zinc-400 text-center py-6">Nenhum membro cadastrado no sistema.</p>`;
             } else {
+                // Agrupar atletas por categoria
+                const categoriasMap = {};
+                atletasList.forEach(a => {
+                    const cat = a.categoria || 'Sem Categoria';
+                    if (!categoriasMap[cat]) categoriasMap[cat] = [];
+                    categoriasMap[cat].push(a);
+                });
+
                 container.innerHTML = `
-                    <div class="mb-3 text-xs text-zinc-400 bg-zinc-950 p-3 rounded-xl border border-zinc-800">
-                        Confronto: <strong class="text-white">${jogo.mandante} x ${jogo.visitante}</strong><br>
-                        Categoria: <span class="custom-text font-bold">${jogo.categoria}</span>
+                    <div class="mb-3 text-xs text-zinc-400 bg-zinc-950 p-3 rounded-xl border border-zinc-800 flex justify-between items-center">
+                        <div>
+                            Confronto: <strong class="text-white">${jogo.mandante} x ${jogo.visitante}</strong><br>
+                            Categoria do Jogo: <span class="custom-text font-bold">${jogo.categoria}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-emerald-400 font-bold">${jogo.presencas.length}</span> / ${atletasList.length} convocados
+                        </div>
                     </div>
-                    <div class="space-y-2 max-h-[50vh] overflow-y-auto pr-1" id="lista-presenca-scroll">
-                        ${atletasList.map(a => {
-                            const confirmado = jogo.presencas.includes(a.id);
+                    <div class="space-y-4 max-h-[55vh] overflow-y-auto pr-1" id="lista-presenca-scroll">
+                        ${Object.keys(categoriasMap).map(catName => {
+                            const atletasCat = categoriasMap[catName];
+                            const isGameCat = catName === jogo.categoria;
                             return `
-                                <label class="flex items-center justify-between p-3 bg-zinc-950 border ${confirmado ? 'border-orange-500/50 bg-orange-500/5' : 'border-zinc-800'} rounded-xl cursor-pointer hover:border-zinc-700 transition">
-                                    <div class="flex items-center gap-3">
-                                        <input type="checkbox" ${confirmado ? 'checked' : ''} onchange="togglePresenca(${a.id})" class="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-orange-500 focus:ring-orange-500">
-                                        <div>
-                                            <p class="font-bold text-white text-sm">${a.nome} <span class="text-[10px] px-2 py-0.5 bg-zinc-800 rounded text-zinc-300">${a.funcao || 'Atleta'}</span></p>
-                                            <p class="text-xs text-zinc-400">${a.categoria} ${a.doc ? '• Doc: ' + a.doc : ''}</p>
+                                <div class="bg-zinc-950/60 border ${isGameCat ? 'border-orange-500/40' : 'border-zinc-800'} rounded-xl p-3">
+                                    <div class="flex justify-between items-center mb-2 pb-2 border-b border-zinc-800">
+                                        <h4 class="font-bold text-xs uppercase tracking-wider text-white flex items-center gap-2">
+                                            <i class="fa-solid fa-layer-group custom-text"></i> ${catName} ${isGameCat ? '<span class="text-[10px] px-2 py-0.5 custom-badge rounded">Categoria do Jogo</span>' : ''}
+                                        </h4>
+                                        <div class="flex gap-2">
+                                            <button type="button" onclick="marcarCategoria('${catName}', true)" class="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1 rounded">Marcar Todos</button>
+                                            <button type="button" onclick="marcarCategoria('${catName}', false)" class="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1 rounded">Limpar</button>
                                         </div>
                                     </div>
-                                    <span class="text-xs px-2.5 py-1 rounded-full ${confirmado ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
-                                        ${confirmado ? 'Confirmado' : 'Pendente'}
-                                    </span>
-                                </label>
+                                    <div class="space-y-2">
+                                        ${atletasCat.map(a => {
+                                            const confirmado = jogo.presencas.includes(a.id);
+                                            return `
+                                                <label class="flex items-center justify-between p-2.5 bg-zinc-900 border ${confirmado ? 'border-orange-500/50 bg-orange-500/5' : 'border-zinc-800/80'} rounded-lg cursor-pointer hover:border-zinc-700 transition">
+                                                    <div class="flex items-center gap-2.5">
+                                                        <input type="checkbox" ${confirmado ? 'checked' : ''} onchange="togglePresenca(${a.id})" class="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-orange-500 focus:ring-orange-500">
+                                                        <div>
+                                                            <p class="font-bold text-white text-xs">${a.nome} <span class="text-[9px] px-1.5 py-0.2 bg-zinc-800 rounded text-zinc-300">${a.funcao || 'Atleta'}</span></p>
+                                                            <p class="text-[11px] text-zinc-400">${a.doc ? 'Doc: ' + a.doc : ''} ${a.telefone ? '• ' + a.telefone : ''}</p>
+                                                        </div>
+                                                    </div>
+                                                    <span class="text-[10px] px-2 py-0.5 rounded-full ${confirmado ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
+                                                        ${confirmado ? 'Confirmado' : 'Pendente'}
+                                                    </span>
+                                                </label>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </div>
                             `;
                         }).join('')}
                     </div>
@@ -1330,6 +1362,34 @@
             } else {
                 jogo.presencas.push(atletaId);
             }
+
+            const scrollEl = document.getElementById('lista-presenca-scroll');
+            const scrollPos = scrollEl ? scrollEl.scrollTop : 0;
+
+            salvarDados();
+            abrirModalPresenca(jogoAtualPresencaId);
+
+            const newScrollEl = document.getElementById('lista-presenca-scroll');
+            if (newScrollEl) {
+                newScrollEl.scrollTop = scrollPos;
+            }
+        }
+
+        function marcarCategoria(catName, selecionar) {
+            const jogo = db.jogos.find(j => j.id === jogoAtualPresencaId);
+            if (!jogo) return;
+            if (!jogo.presencas) jogo.presencas = [];
+
+            const atletasNaCat = db.atletas.filter(a => (a.categoria || 'Sem Categoria') === catName);
+
+            atletasNaCat.forEach(a => {
+                const index = jogo.presencas.indexOf(a.id);
+                if (selecionar && index === -1) {
+                    jogo.presencas.push(a.id);
+                } else if (!selecionar && index > -1) {
+                    jogo.presencas.splice(index, 1);
+                }
+            });
 
             const scrollEl = document.getElementById('lista-presenca-scroll');
             const scrollPos = scrollEl ? scrollEl.scrollTop : 0;
@@ -1769,15 +1829,15 @@
             document.getElementById('lista-jogos').innerHTML = jogosFiltrados.map(j => {
                 const totalPresencas = (j.presencas || []).length;
                 
-                // Obter atletas convocados (presenças confirmadas ou todos se nenhum check-in foi marcado)
-                const passageirosIds = (j.presencas && j.presencas.length > 0) ? j.presencas : db.atletas.map(a => a.id);
+                // Obter atletas convocados
+                const passageirosIds = (j.presencas && j.presencas.length > 0) ? j.presencas : [];
                 let atletasConvidados = db.atletas.filter(a => passageirosIds.includes(a.id) && (a.funcao || 'Atleta') === 'Atleta');
                 atletasConvidados.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 
                 return `
                     <div class="rounded-2xl bg-gradient-to-b from-zinc-950 to-zinc-900 border-2 custom-border p-5 shadow-2xl flex flex-col justify-between relative overflow-hidden">
                         
-                        <!-- ÁREA DO POSTER (Capturada perfeitamente na imagem PNG, sem botões de ação) -->
+                        <!-- ÁREA DO POSTER -->
                         <div id="poster-jogo-${j.id}" class="bg-zinc-950 p-4 rounded-xl border border-zinc-800/80">
                             <div class="flex justify-between items-start mb-3">
                                 <span class="custom-badge border text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">${j.campeonato} • ${j.categoria}</span>
@@ -1824,11 +1884,11 @@
                                             </div>
                                         `).join('')}
                                     </div>
-                                ` : `<p class="text-[11px] text-zinc-500 italic">Nenhum atleta vinculado ou selecionado.</p>`}
+                                ` : `<p class="text-[11px] text-zinc-500 italic">Nenhum atleta convocado ainda para este jogo.</p>`}
                             </div>
                         </div>
 
-                        <!-- BOTÕES DE GERENCIAMENTO (Ficam fora da imagem PNG gerada) -->
+                        <!-- BOTÕES DE GERENCIAMENTO -->
                         <div class="mt-4 pt-3 border-t border-zinc-800 space-y-2">
                             <div class="flex justify-between items-center">
                                 <div class="flex gap-2">
