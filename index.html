@@ -12,7 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-    <!-- Bibliotecas para Exportação, Importação & Geração de Imagem (jsPDF, SheetJS, PDF.js & html2canvas) -->
+    <!-- Bibliotecas para Exportação, Importação & Geração de Imagem -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -24,7 +24,10 @@
         }
     </script>
 
-    <!-- Estilo Dinâmico para Cores Personalizadas -->
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
     <style id="dynamic-theme">
         .custom-bg { background-color: #f97316 !important; }
         .custom-bg:hover { filter: brightness(0.9); }
@@ -69,7 +72,7 @@
         <!-- Cabeçalho -->
         <header class="bg-zinc-950 border-b border-zinc-800 text-white shadow-md">
             <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col lg:flex-row justify-between items-center gap-4">
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 w-full lg:w-auto">
                     <div id="header-logo-container">
                         <div class="custom-bg w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg" id="header-logo-placeholder">
                             NH
@@ -79,22 +82,26 @@
                         <h1 id="header-club-name" class="text-base font-bold flex items-center gap-2">
                             Sociedade Esportiva Novo Horizonte
                         </h1>
-                        <p class="text-[11px] text-zinc-400 font-medium">Painel Oficial de Gestão e Match Day <span id="user-role-badge" class="ml-2 px-2 py-0.5 bg-zinc-900 border border-zinc-700 text-orange-400 rounded text-[10px]"></span></p>
+                        <p class="text-[11px] text-zinc-400 font-medium">Painel Oficial de Gestão e Match Day</p>
+                        <div class="mt-1">
+                            <span id="user-role-badge" class="inline-block px-2.5 py-0.5 bg-zinc-900 border border-zinc-700 text-orange-400 rounded text-[10px] font-semibold"></span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 overflow-x-auto w-full lg:w-auto pb-2 lg:pb-0 justify-between lg:justify-end">
-                    <nav class="flex gap-2">
-                        <button onclick="switchTab('tab-jogos')" id="btn-jogos" class="tab-btn px-3 py-2 rounded-lg custom-bg font-medium text-xs whitespace-nowrap transition text-white">Jogos</button>
-                        <button onclick="switchTab('tab-clubes')" id="btn-clubes" class="tab-btn px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Clubes</button>
-                        <button onclick="switchTab('tab-categorias')" id="btn-categorias" class="tab-btn px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Categorias</button>
-                        <button onclick="switchTab('tab-campeonatos')" id="btn-campeonatos" class="tab-btn px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Campeonatos</button>
-                        <button onclick="switchTab('tab-estadios')" id="btn-estadios" class="tab-btn px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Estádios</button>
-                        <button onclick="switchTab('tab-elencos')" id="btn-elencos" class="tab-btn px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Elencos / Pessoas</button>
-                        <button onclick="switchTab('tab-config')" id="btn-config" class="tab-btn px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300"><i class="fa-solid fa-gear"></i> Configurações</button>
+                <div class="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-end overflow-hidden">
+                    <nav class="flex gap-2 overflow-x-auto py-1 px-1 w-full lg:w-auto no-scrollbar scroll-smooth">
+                        <button onclick="switchTab('tab-jogos')" id="btn-jogos" class="tab-btn shrink-0 px-3.5 py-2 rounded-lg custom-bg font-medium text-xs whitespace-nowrap transition text-white">Jogos / Match Day</button>
+                        <button onclick="switchTab('tab-agenda')" id="btn-agenda" class="tab-btn shrink-0 px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300"><i class="fa-solid fa-calendar-days"></i> Agenda Mensal</button>
+                        <button onclick="switchTab('tab-clubes')" id="btn-clubes" class="tab-btn shrink-0 px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Clubes</button>
+                        <button onclick="switchTab('tab-categorias')" id="btn-categorias" class="tab-btn shrink-0 px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Categorias</button>
+                        <button onclick="switchTab('tab-campeonatos')" id="btn-campeonatos" class="tab-btn shrink-0 px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Campeonatos</button>
+                        <button onclick="switchTab('tab-estadios')" id="btn-estadios" class="tab-btn shrink-0 px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Estádios</button>
+                        <button onclick="switchTab('tab-elencos')" id="btn-elencos" class="tab-btn shrink-0 px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300">Elencos / Pessoas</button>
+                        <button onclick="switchTab('tab-config')" id="btn-config" class="tab-btn shrink-0 px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 font-medium text-xs whitespace-nowrap transition text-zinc-300"><i class="fa-solid fa-gear"></i> Configurações</button>
                     </nav>
 
-                    <div class="flex items-center gap-1.5 border-l border-zinc-800 pl-3">
+                    <div class="flex items-center gap-1.5 border-l border-zinc-800 pl-3 shrink-0">
                         <button onclick="exportarBackup()" title="Baixar cópia de segurança" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white px-2.5 py-2 rounded-lg text-xs transition flex items-center gap-1 border border-zinc-800">
                             <i class="fa-solid fa-floppy-disk"></i> <span class="hidden sm:inline">Backup</span>
                         </button>
@@ -189,6 +196,39 @@
                         </div>
                     </div>
                     <div id="lista-jogos" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+            </section>
+
+            <!-- ABA DE AGENDA MENSAL -->
+            <section id="tab-agenda" class="tab-content hidden">
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 pb-4 border-b border-zinc-800">
+                        <div class="flex items-center gap-3">
+                            <button onclick="mudarMesAgenda(-1)" class="bg-zinc-800 hover:bg-zinc-700 text-white w-9 h-9 rounded-xl flex items-center justify-center transition border border-zinc-700">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <h2 id="agenda-titulo-mes" class="text-xl font-bold text-white tracking-wide min-w-[180px] text-center capitalize">-- ----</h2>
+                            <button onclick="mudarMesAgenda(1)" class="bg-zinc-800 hover:bg-zinc-700 text-white w-9 h-9 rounded-xl flex items-center justify-center transition border border-zinc-700">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <button onclick="irParaHojeAgenda()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 transition shadow">
+                            <i class="custom-text fa-solid fa-calendar-day"></i> Ir para Hoje
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-xs font-bold uppercase text-zinc-500 tracking-wider">
+                        <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+                    </div>
+
+                    <div id="agenda-grid-dias" class="grid grid-cols-7 gap-1 sm:gap-2"></div>
+
+                    <div id="agenda-detalhes-dia" class="mt-6 pt-6 border-t border-zinc-800 hidden">
+                        <h3 id="agenda-titulo-detalhes" class="text-base font-bold text-white mb-3 flex items-center gap-2">
+                            <i class="custom-text fa-solid fa-list-check"></i> Jogos do Dia
+                        </h3>
+                        <div id="agenda-lista-detalhes" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
                 </div>
             </section>
 
@@ -329,7 +369,7 @@
                 </div>
             </section>
 
-            <!-- ABA DE CONFIGURAÇÕES / PERSONALIZAÇÃO -->
+            <!-- ABA DE CONFIGURAÇÕES -->
             <section id="tab-config" class="tab-content hidden">
                 <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg mb-6">
                     <h2 class="text-lg font-bold mb-4 text-white flex items-center gap-2">
@@ -358,7 +398,6 @@
                     </form>
                 </div>
 
-                <!-- GERENCIAMENTO DE USUÁRIOS E PERMISSÕES -->
                 <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-lg">
                     <h3 class="text-base font-bold mb-3 text-white flex items-center gap-2">
                         <i class="custom-text fa-solid fa-users-gear"></i> Gerenciamento de Usuários e Permissões
@@ -384,7 +423,7 @@
         </main>
     </div>
 
-    <!-- MODAL DE RELATÓRIO DE JOGOS -->
+    <!-- MODAIS -->
     <div id="modal-relatorio" class="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
             <div class="p-4 bg-zinc-950 border-b border-zinc-800 flex flex-wrap justify-between items-center gap-2">
@@ -392,151 +431,83 @@
                     <i class="custom-text fa-solid fa-file-lines"></i> Relatório Geral de Jogos Agendados
                 </h3>
                 <div class="flex flex-wrap gap-2">
-                    <button onclick="exportarPDF()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow">
-                        <i class="fa-solid fa-file-pdf"></i> PDF
-                    </button>
-                    <button onclick="exportarExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow">
-                        <i class="fa-solid fa-file-excel"></i> Excel
-                    </button>
-                    <button onclick="window.print()" class="custom-bg text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow">
-                        <i class="fa-solid fa-print"></i> Imprimir
-                    </button>
-                    <button onclick="fecharRelatorioJogos()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg transition">
-                        <i class="fa-solid fa-xmark"></i> Fechar
-                    </button>
+                    <button onclick="exportarPDF()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow">PDF</button>
+                    <button onclick="exportarExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow">Excel</button>
+                    <button onclick="window.print()" class="custom-bg text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow">Imprimir</button>
+                    <button onclick="fecharRelatorioJogos()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg transition">Fechar</button>
                 </div>
             </div>
             <div id="conteudo-relatorio" class="p-6 overflow-y-auto space-y-4 text-sm text-zinc-200"></div>
         </div>
     </div>
 
-    <!-- MODAL DE CONTROLE DE PRESENÇA (CHECK-IN SEPARADO POR CATEGORIAS) -->
     <div id="modal-presenca" class="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
             <div class="p-4 bg-zinc-950 border-b border-zinc-800 flex justify-between items-center">
                 <h3 class="font-bold text-white text-base flex items-center gap-2">
                     <i class="custom-text fa-solid fa-clipboard-user"></i> Convocação e Check-in por Categoria
                 </h3>
-                <button onclick="fecharModalPresenca()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg transition">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <button onclick="fecharModalPresenca()" class="bg-zinc-800 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="conteudo-presenca" class="p-6 overflow-y-auto space-y-4 text-sm text-zinc-200"></div>
         </div>
     </div>
 
-    <!-- MODAL DE MANIFESTO DE VIAGEM -->
     <div id="modal-manifesto" class="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
             <div class="p-4 bg-zinc-950 border-b border-zinc-800 flex justify-between items-center">
-                <h3 class="font-bold text-white text-base flex items-center gap-2">
-                    <i class="custom-text fa-solid fa-bus"></i> Manifesto de Viagem (Ônibus / Transporte)
-                </h3>
-                <button onclick="fecharModalManifesto()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg transition">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <h3 class="font-bold text-white text-base flex items-center gap-2"><i class="custom-text fa-solid fa-bus"></i> Manifesto de Viagem</h3>
+                <button onclick="fecharModalManifesto()" class="bg-zinc-800 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-6 overflow-y-auto space-y-4 text-sm text-zinc-300">
                 <form id="form-manifesto" onsubmit="salvarEImprimirManifesto(event)" class="space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Origem</label>
-                            <input type="text" id="man-origem" placeholder="Ex: Santa Maria - RS" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Destino</label>
-                            <input type="text" id="man-destino" placeholder="Ex: Porto Alegre - RS" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Data e Hora de Saída</label>
-                            <input type="datetime-local" id="man-saida" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Data e Hora de Retorno</label>
-                            <input type="datetime-local" id="man-retorno" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Placa do Veículo</label>
-                            <input type="text" id="man-placa" placeholder="Ex: ABC-1D23" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Ano do Veículo</label>
-                            <input type="text" id="man-ano" placeholder="Ex: 2022" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Qtd de Lugares / Capacidade</label>
-                            <input type="number" id="man-lugares" placeholder="Ex: 44" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Quilometragem Rodada</label>
-                            <input type="text" id="man-km" placeholder="Ex: 320 km" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required>
-                        </div>
+                        <div><label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Origem</label><input type="text" id="man-origem" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></div>
+                        <div><label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Destino</label><input type="text" id="man-destino" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></div>
+                        <div><label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Data/Hora Saída</label><input type="datetime-local" id="man-saida" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></div>
+                        <div><label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Data/Hora Retorno</label><input type="datetime-local" id="man-retorno" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></div>
+                        <div><label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Placa</label><input type="text" id="man-placa" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></div>
+                        <div><label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Ano</label><input type="text" id="man-ano" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></div>
+                        <div><label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Lugares</label><input type="number" id="man-lugares" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></div>
+                        <div><label class="block text-xs font-bold uppercase text-zinc-400 mb-1">KM Rodada</label><input type="text" id="man-km" class="w-full border border-zinc-700 rounded-lg p-2.5 bg-zinc-800 text-sm text-white" required></div>
                     </div>
-
                     <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800">
-                        <p class="font-bold text-white text-xs mb-1"><i class="fa-solid fa-users custom-text"></i> Passageiros no Manifesto:</p>
-                        <p class="text-xs text-zinc-400">Serão incluídos automaticamente os membros confirmados (Check-in) ou todos cadastrados, além de 5 linhas em branco para preenchimento manual.</p>
+                        <p class="font-bold text-white text-xs mb-1">Passageiros no Manifesto:</p>
                         <div id="man-lista-passageiros-resumo" class="mt-2 text-xs text-zinc-300 font-medium"></div>
                     </div>
-
                     <div class="flex justify-end gap-2 pt-3 border-t border-zinc-800">
-                        <button type="button" onclick="fecharModalManifesto()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2.5 rounded-xl text-xs font-bold transition">Cancelar</button>
-                        <button type="submit" class="custom-bg text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow flex items-center gap-2 transition">
-                            <i class="fa-solid fa-file-pdf"></i> Gerar e Baixar PDF do Manifesto
-                        </button>
+                        <button type="button" onclick="fecharModalManifesto()" class="bg-zinc-800 text-zinc-300 px-4 py-2.5 rounded-xl text-xs font-bold">Cancelar</button>
+                        <button type="submit" class="custom-bg text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow">Gerar PDF</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DE IMPORTAÇÃO DE PESSOAS -->
     <div id="modal-importar-atletas" class="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
             <div class="p-4 bg-zinc-950 border-b border-zinc-800 flex justify-between items-center">
-                <h3 class="font-bold text-white text-base flex items-center gap-2">
-                    <i class="text-emerald-400 fa-solid fa-file-arrow-up"></i> Importar ou Colar Membros em Lote
-                </h3>
-                <button onclick="fecharModalImportarAtletas()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg transition">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <h3 class="font-bold text-white text-base flex items-center gap-2"><i class="text-emerald-400 fa-solid fa-file-arrow-up"></i> Importar Membros</h3>
+                <button onclick="fecharModalImportarAtletas()" class="bg-zinc-800 text-zinc-300 text-xs font-bold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-6 overflow-y-auto space-y-4 text-sm text-zinc-300">
                 <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-xs space-y-1.5">
-                    <p class="font-bold text-white mb-1"><i class="fa-solid fa-circle-info text-emerald-400"></i> Formato do texto colado (um por linha):</p>
-                    <p class="text-zinc-400">Ordem: <code class="text-orange-400">Nome; Função (Atleta/Diretoria/Comissão/Diversos); Categoria; CPF/RG; Telefone</code></p>
-                    <p class="text-zinc-500 italic">Exemplo: Carlos Silva; Comissão Técnica; Sub-17; 123.456.789-00; 55999999999</p>
+                    <p class="font-bold text-white mb-1">Formato do texto colado (por linha):</p>
+                    <p class="text-zinc-400"><code class="text-orange-400">Nome; Função; Categoria; CPF/RG; Telefone</code></p>
                 </div>
-
-                <div>
-                    <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Opção 1: Colar Lista de Texto</label>
-                    <textarea id="input-texto-atletas" rows="5" placeholder="Cole aqui a lista..." class="w-full border border-zinc-700 rounded-xl p-3 bg-zinc-950 text-xs text-white focus:ring-2 focus:ring-emerald-500 outline-none"></textarea>
-                </div>
-
-                <div class="relative flex py-1 items-center">
-                    <div class="flex-grow border-t border-zinc-800"></div>
-                    <span class="flex-shrink mx-4 text-zinc-500 text-[10px] uppercase tracking-wider font-bold">OU</span>
-                    <div class="flex-grow border-t border-zinc-800"></div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Opção 2: Enviar Arquivo (Excel, TXT ou PDF)</label>
-                    <input type="file" id="input-arquivo-atletas" accept=".xlsx, .xls, .csv, .txt, .pdf" class="w-full text-xs text-zinc-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700 cursor-pointer border border-zinc-700 rounded-xl bg-zinc-950 p-2">
-                </div>
-
+                <div><label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Colar Lista de Texto</label><textarea id="input-texto-atletas" rows="4" class="w-full border border-zinc-700 rounded-xl p-3 bg-zinc-950 text-xs text-white focus:ring-2 focus:ring-emerald-500 outline-none"></textarea></div>
+                <div><label class="block text-xs font-bold uppercase text-zinc-400 mb-1">Ou Enviar Arquivo (Excel, TXT ou PDF)</label><input type="file" id="input-arquivo-atletas" accept=".xlsx, .xls, .csv, .txt, .pdf" class="w-full text-xs text-zinc-400 border border-zinc-700 rounded-xl bg-zinc-950 p-2"></div>
                 <div id="status-importacao" class="text-xs text-center font-medium hidden"></div>
-
                 <div class="flex justify-end gap-2 pt-3 border-t border-zinc-800">
-                    <button onclick="fecharModalImportarAtletas()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 rounded-xl text-xs font-bold transition">Cancelar</button>
-                    <button onclick="executarImportacaoAtletas()" class="custom-bg text-white px-5 py-2 rounded-xl text-xs font-bold shadow transition">Processar e Importar</button>
+                    <button onclick="fecharModalImportarAtletas()" class="bg-zinc-800 text-zinc-300 px-4 py-2 rounded-xl text-xs font-bold">Cancelar</button>
+                    <button onclick="executarImportacaoAtletas()" class="custom-bg text-white px-5 py-2 rounded-xl text-xs font-bold shadow">Processar e Importar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script de Gestão e Conexão com o Firebase -->
+    <!-- JavaScript com Inicialização Protegida e Fallback -->
     <script>
-        // === CHAVES DO FIREBASE CONFIGURADAS ===
         const firebaseConfig = {
             apiKey: "AIzaSyB5UBjiV9pvLE9SHF9Zg1ariKz4WGFmIeQ",
             authDomain: "marcador-de-jogos.firebaseapp.com",
@@ -545,29 +516,18 @@
             messagingSenderId: "1014983034234",
             appId: "1:1014983034234:web:66a129d442e9a0338a82c3"
         };
-        // ======================================
-
-        firebase.initializeApp(firebaseConfig);
-        const firestore = firebase.firestore();
 
         let db = {
-            config: {
-                nomeClube: "Sociedade Esportiva Novo Horizonte",
-                logoClube: "",
-                corTema: "#f97316"
-            },
-            campeonatos: [],
-            categorias: [],
-            clubes: [],
-            estadios: [],
-            atletas: [],
-            jogos: [],
-            usuarios: []
+            config: { nomeClube: "Sociedade Esportiva Novo Horizonte", logoClube: "", corTema: "#f97316" },
+            campeonatos: [], categorias: [], clubes: [], estadios: [], atletas: [], jogos: [], usuarios: []
         };
+
+        let firestore = null;
+        let dataAgendaAtual = new Date();
 
         window.addEventListener('DOMContentLoaded', () => {
             carregarConfigLogin();
-            ouvinteTempoRealInicial();
+            inicializarFirebase();
         });
 
         function carregarConfigLogin() {
@@ -581,28 +541,38 @@
             }
         }
 
-        function ouvinteTempoRealInicial() {
-            firestore.collection('sistema').doc('dados_futebol').onSnapshot((doc) => {
-                if (doc.exists) {
-                    db = doc.data();
-                    if (!db.config) {
-                        db.config = { nomeClube: "Sociedade Esportiva Novo Horizonte", logoClube: "", corTema: "#f97316" };
-                    }
-                    if (!db.usuarios) db.usuarios = [];
-                    
-                    if (db.config.logoClube) localStorage.setItem('fc_logo', db.config.logoClube);
-                    if (db.config.nomeClube) localStorage.setItem('fc_nomeClube', db.config.nomeClube);
-                    carregarConfigLogin();
+        function inicializarFirebase() {
+            try {
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                firestore = firebase.firestore();
 
-                    if (!document.getElementById('app-screen').classList.contains('hidden')) {
-                        atualizarInterface();
-                    }
-                } else {
-                    salvarDados();
+                const localData = localStorage.getItem('fc_db_cache');
+                if (localData) {
+                    try { db = JSON.parse(localData); } catch(e){}
                 }
-            }, (error) => {
-                console.error("Erro ao sincronizar com o Firebase:", error);
-            });
+
+                firestore.collection('sistema').doc('dados_futebol').onSnapshot((doc) => {
+                    if (doc && doc.exists) {
+                        db = doc.data();
+                        if (!db.config) db.config = { nomeClube: "Sociedade Esportiva Novo Horizonte", logoClube: "", corTema: "#f97316" };
+                        if (!db.usuarios) db.usuarios = [];
+                        localStorage.setItem('fc_db_cache', JSON.stringify(db));
+                        if (db.config.logoClube) localStorage.setItem('fc_logo', db.config.logoClube);
+                        if (db.config.nomeClube) localStorage.setItem('fc_nomeClube', db.config.nomeClube);
+                        carregarConfigLogin();
+
+                        if (!document.getElementById('app-screen').classList.contains('hidden')) {
+                            atualizarInterface();
+                        }
+                    } else {
+                        salvarDados();
+                    }
+                }, (error) => {
+                    console.warn("Aviso Firebase (utilizando modo local):", error.message);
+                });
+            } catch (err) {
+                console.warn("Erro ao iniciar Firebase (Fallback ativado):", err);
+            }
         }
 
         function autenticar(e) {
@@ -647,7 +617,6 @@
         function sair() {
             sessionStorage.clear();
             document.getElementById('app-screen').classList.add('hidden');
-            document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('login-screen').classList.remove('hidden');
             document.getElementById('input-usuario').value = '';
             document.getElementById('input-senha').value = '';
@@ -656,13 +625,17 @@
         }
 
         function salvarDados() {
-            firestore.collection('sistema').doc('dados_futebol').set(db)
-                .then(() => {
-                    atualizarInterface();
-                })
-                .catch((error) => {
-                    alert("Erro ao salvar na nuvem: " + error.message);
-                });
+            localStorage.setItem('fc_db_cache', JSON.stringify(db));
+            if (firestore) {
+                firestore.collection('sistema').doc('dados_futebol').set(db)
+                    .then(() => { atualizarInterface(); })
+                    .catch((error) => {
+                        console.error("Erro ao salvar no Firebase:", error);
+                        atualizarInterface();
+                    });
+            } else {
+                atualizarInterface();
+            }
         }
 
         function exportarBackup() {
@@ -689,6 +662,100 @@
                 activeBtn.classList.remove('bg-zinc-900', 'text-zinc-300');
                 activeBtn.classList.add('custom-bg', 'text-white');
             }
+
+            if (tabId === 'tab-agenda') {
+                renderizarAgendaMensal();
+            }
+        }
+
+        function mudarMesAgenda(delta) {
+            dataAgendaAtual.setMonth(dataAgendaAtual.getMonth() + delta);
+            renderizarAgendaMensal();
+        }
+
+        function irParaHojeAgenda() {
+            dataAgendaAtual = new Date();
+            renderizarAgendaMensal();
+        }
+
+        function renderizarAgendaMensal() {
+            const ano = dataAgendaAtual.getFullYear();
+            const mes = dataAgendaAtual.getMonth();
+
+            const nomesMeses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            document.getElementById('agenda-titulo-mes').innerText = `${nomesMeses[mes]} ${ano}`;
+
+            const primeiroDiaMes = new Date(ano, mes, 1).getDay();
+            const totalDiasMes = new Date(ano, mes + 1, 0).getDate();
+
+            const hoje = new Date();
+            const ehMesAtual = hoje.getFullYear() === ano && hoje.getMonth() === mes;
+            const diaHoje = hoje.getDate();
+
+            const gridEl = document.getElementById('agenda-grid-dias');
+            gridEl.innerHTML = '';
+
+            for (let i = 0; i < primeiroDiaMes; i++) {
+                gridEl.innerHTML += `<div class="h-20 sm:h-24 bg-zinc-950/40 rounded-xl border border-zinc-900/60 opacity-30"></div>`;
+            }
+
+            for (let dia = 1; dia <= totalDiasMes; dia++) {
+                const mesFmt = String(mes + 1).padStart(2, '0');
+                const diaFmt = String(dia).padStart(2, '0');
+                const dataStr = `${ano}-${mesFmt}-${diaFmt}`;
+
+                const jogosDoDia = (db.jogos || []).filter(j => j.data === dataStr);
+                const ehHoje = ehMesAtual && dia === diaHoje;
+
+                gridEl.innerHTML += `
+                    <div onclick="selecionarDiaAgenda('${dataStr}')" class="h-20 sm:h-24 bg-zinc-950 border ${ehHoje ? 'border-orange-500 bg-orange-500/10' : 'border-zinc-800'} hover:border-zinc-600 rounded-xl p-1.5 sm:p-2 cursor-pointer flex flex-col justify-between transition relative overflow-hidden group">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs sm:text-sm font-bold ${ehHoje ? 'custom-text' : 'text-zinc-300'}">${dia}</span>
+                            ${jogosDoDia.length > 0 ? `<span class="px-1.5 py-0.5 custom-bg text-[10px] font-black text-white rounded-full shadow">${jogosDoDia.length}</span>` : ''}
+                        </div>
+                        <div class="space-y-1 overflow-hidden">
+                            ${jogosDoDia.slice(0, 2).map(j => `
+                                <div class="text-[9px] sm:text-[10px] truncate bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-800 text-zinc-300 font-medium">
+                                    <strong class="custom-text">${j.hora}</strong> ${j.mandante.substring(0, 6)} x ${j.visitante.substring(0, 6)}
+                                </div>
+                            `).join('')}
+                            ${jogosDoDia.length > 2 ? `<div class="text-[9px] text-zinc-500 font-bold text-center">+${jogosDoDia.length - 2} mais</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('agenda-detalhes-dia').classList.add('hidden');
+        }
+
+        function selecionarDiaAgenda(dataStr) {
+            const jogosDoDia = (db.jogos || []).filter(j => j.data === dataStr);
+            const containerDetalhes = document.getElementById('agenda-detalhes-dia');
+            const listaDetalhes = document.getElementById('agenda-lista-detalhes');
+            const tituloDetalhes = document.getElementById('agenda-titulo-detalhes');
+
+            const dataFmt = dataStr.split('-').reverse().join('/');
+            tituloDetalhes.innerHTML = `<i class="custom-text fa-solid fa-list-check"></i> Jogos em <strong class="text-white">${dataFmt}</strong> (${jogosDoDia.length} ${jogosDoDia.length === 1 ? 'partida' : 'partidas'})`;
+
+            if (jogosDoDia.length === 0) {
+                listaDetalhes.innerHTML = `<p class="text-zinc-500 text-xs sm:col-span-2 py-4">Nenhum jogo agendado para esta data.</p>`;
+            } else {
+                listaDetalhes.innerHTML = jogosDoDia.map(j => `
+                    <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800 flex justify-between items-center">
+                        <div>
+                            <span class="custom-badge border text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">${j.campeonato} • ${j.categoria}</span>
+                            <h4 class="font-bold text-sm text-white mt-2">${j.mandante} x ${j.visitante}</h4>
+                            <p class="text-xs text-zinc-400 mt-1"><i class="fa-regular fa-clock custom-text"></i> ${j.hora} hs | Local: ${j.local}</p>
+                        </div>
+                        <button onclick="editarJogo(${j.id})" class="bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 font-bold px-3 py-2 rounded-lg border border-zinc-700 transition">
+                            Ver / Editar
+                        </button>
+                    </div>
+                `).join('');
+            }
+
+            containerDetalhes.classList.remove('hidden');
+            containerDetalhes.scrollIntoView({ behavior: 'smooth' });
         }
 
         function redimensionarEConverterImagem(fileInputId, callback) {
@@ -723,7 +790,6 @@
             }
         }
 
-        // --- GERAR IMAGEM DO CARD (POSTER LIMPO COM LISTA DE CONVOCADOS) ---
         function gerarImagemCard(jogoId) {
             const posterEl = document.getElementById(`poster-jogo-${jogoId}`);
             if (!posterEl) return;
@@ -742,7 +808,6 @@
             });
         }
 
-        // --- CONFIGURAÇÕES / PERSONALIZAÇÃO ---
         function salvarConfigApp(e) {
             e.preventDefault();
             const nomeClube = document.getElementById('cfg-nome-clube').value;
@@ -762,7 +827,6 @@
             });
         }
 
-        // --- GESTÃO DE USUÁRIOS E PERMISSÕES ---
         function salvarUsuarioSistema(e) {
             e.preventDefault();
             const usuario = document.getElementById('novo-user-nome').value.trim();
@@ -776,13 +840,7 @@
                 return;
             }
 
-            db.usuarios.push({
-                id: Date.now(),
-                usuario,
-                senha,
-                permissao
-            });
-
+            db.usuarios.push({ id: Date.now(), usuario, senha, permissao });
             salvarDados();
             document.getElementById('novo-user-nome').value = '';
             document.getElementById('novo-user-senha').value = '';
@@ -796,7 +854,6 @@
             }
         }
 
-        // --- IMPORTAÇÃO / COLAGEM EM MASSA ---
         function abrirModalImportarAtletas() {
             document.getElementById('input-texto-atletas').value = '';
             document.getElementById('input-arquivo-atletas').value = '';
@@ -819,7 +876,6 @@
 
             try {
                 let novosMembros = [];
-
                 if (textoInput) {
                     novosMembros = parsearTextoMembros(textoInput);
                 } else if (fileInput.files && fileInput.files.length > 0) {
@@ -833,15 +889,13 @@
                     } else if (fileName.endsWith('.pdf')) {
                         novosMembros = await lerArquivoPdfMembros(file);
                     } else {
-                        throw new Error("Formato de arquivo não suportado.");
+                        throw new Error("Formato não suportado.");
                     }
                 } else {
                     throw new Error("Cole o texto na caixa ou selecione um arquivo.");
                 }
 
-                if (novosMembros.length === 0) {
-                    throw new Error("Nenhum cadastro válido foi identificado.");
-                }
+                if (novosMembros.length === 0) throw new Error("Nenhum cadastro válido foi identificado.");
 
                 let count = 0;
                 novosMembros.forEach(m => {
@@ -862,12 +916,9 @@
                 statusEl.classList.remove('text-zinc-400');
                 statusEl.classList.add('text-emerald-400');
                 statusEl.innerText = `Sucesso! ${count} membros importados.`;
-                setTimeout(() => {
-                    fecharModalImportarAtletas();
-                }, 1500);
+                setTimeout(() => { fecharModalImportarAtletas(); }, 1500);
 
             } catch (error) {
-                console.error(error);
                 statusEl.classList.remove('text-zinc-400');
                 statusEl.classList.add('text-rose-400');
                 statusEl.innerText = "Erro: " + error.message;
@@ -914,9 +965,7 @@
                         })).filter(m => m.nome);
 
                         resolve(membros);
-                    } catch (err) {
-                        reject(err);
-                    }
+                    } catch (err) { reject(err); }
                 };
                 reader.onerror = reject;
                 reader.readAsArrayBuffer(file);
@@ -927,11 +976,7 @@
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    try {
-                        resolve(parsearTextoMembros(e.target.result));
-                    } catch (err) {
-                        reject(err);
-                    }
+                    try { resolve(parsearTextoMembros(e.target.result)); } catch (err) { reject(err); }
                 };
                 reader.onerror = reject;
                 reader.readAsText(file);
@@ -969,7 +1014,6 @@
             return membros.filter(m => m.nome && m.nome.length > 2);
         }
 
-        // --- GERAÇÃO DE PDF DE CONVOCAÇÕES (PÁGINA ÚNICA) ---
         function gerarPdfConvocacao(jogoId) {
             const jogo = db.jogos.find(j => j.id === jogoId);
             if (!jogo) return;
@@ -1048,7 +1092,6 @@
             doc.save(`convocacao_${jogo.data}_${jogo.mandante}_vs_${jogo.visitante}.pdf`);
         }
 
-        // --- MANIFESTO DE VIAGEM (PÁGINA ÚNICA) ---
         let jogoAtualManifestoId = null;
         function abrirModalManifesto(jogoId) {
             jogoAtualManifestoId = jogoId;
@@ -1060,10 +1103,7 @@
                 destino: jogo.local || '',
                 saida: jogo.data ? `${jogo.data}T${jogo.saida || '08:00'}` : '',
                 retorno: jogo.data ? `${jogo.data}T18:00` : '',
-                placa: '',
-                ano: '',
-                lugares: '44',
-                km: '150 km'
+                placa: '', ano: '', lugares: '44', km: '150 km'
             };
 
             document.getElementById('man-origem').value = man.origem;
@@ -1076,8 +1116,7 @@
             document.getElementById('man-km').value = man.km;
 
             const passageirosIds = (jogo.presencas && jogo.presencas.length > 0) ? jogo.presencas : [];
-            const passageirosCount = passageirosIds.length;
-            document.getElementById('man-lista-passageiros-resumo').innerHTML = `Total de ${passageirosCount} passageiros selecionados (Check-in confirmado) + 5 espaços em branco.`;
+            document.getElementById('man-lista-passageiros-resumo').innerHTML = `Total de ${passageirosIds.length} passageiros selecionados (Check-in) + 5 espaços em branco.`;
 
             document.getElementById('modal-manifesto').classList.remove('hidden');
         }
@@ -1150,12 +1189,7 @@
             ]);
 
             for (let i = 1; i <= 5; i++) {
-                tableData.push([
-                    passageiros.length + i,
-                    '',
-                    '',
-                    ''
-                ]);
+                tableData.push([passageiros.length + i, '', '', '']);
             }
 
             doc.autoTable({
@@ -1178,7 +1212,6 @@
             doc.save(`manifesto_viagem_${jogo.data}_${jogo.mandante}_vs_${jogo.visitante}.pdf`);
         }
 
-        // --- RELATÓRIO DE JOGOS & EXPORTAÇÕES ---
         function abrirRelatorioJogos() {
             const modal = document.getElementById('modal-relatorio');
             const container = document.getElementById('conteudo-relatorio');
@@ -1285,7 +1318,6 @@
             XLSX.writeFile(workbook, `relatorio_jogos_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
-        // --- CONTROLE DE PRESENÇA (CHECK-IN SEPARADO POR CATEGORIAS) ---
         let jogoAtualPresencaId = null;
         function abrirModalPresenca(jogoId) {
             jogoAtualPresencaId = jogoId;
@@ -1300,7 +1332,6 @@
             if (atletasList.length === 0) {
                 container.innerHTML = `<p class="text-zinc-400 text-center py-6">Nenhum membro cadastrado no sistema.</p>`;
             } else {
-                // Agrupar atletas por categoria ordenada
                 const categoriasMap = {};
                 db.categorias.forEach(c => { categoriasMap[c.nome] = []; });
                 
@@ -1329,7 +1360,7 @@
                                 <div class="bg-zinc-950/60 border ${isGameCat ? 'border-orange-500/40' : 'border-zinc-800'} rounded-xl p-3">
                                     <div class="flex justify-between items-center mb-2 pb-2 border-b border-zinc-800">
                                         <h4 class="font-bold text-xs uppercase tracking-wider text-white flex items-center gap-2">
-                                            <i class="fa-solid fa-layer-group custom-text"></i> ${catName} ${isGameCat ? '<span class="text-[10px] px-2 py-0.5 custom-badge rounded">Categoria do Jogo</span>' : ''}
+                                            <i class="fa-solid fa-layer-group custom-text"></i> ${catName}${isGameCat ? '<span class="text-[10px] px-2 py-0.5 custom-badge rounded">Categoria do Jogo</span>' : ''}
                                         </h4>
                                         <div class="flex gap-2">
                                             <button type="button" onclick="marcarCategoria('${catName}', true)" class="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1 rounded">Marcar Todos</button>
@@ -1421,7 +1452,6 @@
             }
         }
 
-        // --- CAMPEONATOS ---
         function salvarCampeonato(e) {
             e.preventDefault();
             const id = document.getElementById('camp-id').value;
@@ -1454,7 +1484,6 @@
             document.getElementById('btn-cancelar-camp').classList.add('hidden');
         }
 
-        // --- CATEGORIAS ---
         function salvarCategoria(e) {
             e.preventDefault();
             const id = document.getElementById('cat-id').value;
@@ -1487,7 +1516,6 @@
             document.getElementById('btn-cancelar-cat').classList.add('hidden');
         }
 
-        // --- CLUBES ---
         function salvarClube(e) {
             e.preventDefault();
             const id = document.getElementById('clube-id').value;
@@ -1525,7 +1553,6 @@
             document.getElementById('btn-cancelar-clube').classList.add('hidden');
         }
 
-        // --- ESTÁDIOS ---
         function salvarEstadio(e) {
             e.preventDefault();
             const id = document.getElementById('est-id').value;
@@ -1560,7 +1587,6 @@
             document.getElementById('btn-cancelar-est').classList.add('hidden');
         }
 
-        // --- ATLETAS E PESSOAS ---
         function salvarAtleta(e) {
             e.preventDefault();
             const id = document.getElementById('atleta-id').value;
@@ -1604,10 +1630,14 @@
             document.getElementById('btn-cancelar-atleta').classList.add('hidden');
         }
 
-        // --- JOGOS ---
+        let jogoEmEdicaoOriginal = null;
+
         function salvarJogo(e) {
             e.preventDefault();
             const id = document.getElementById('jogo-id').value;
+            const jogoExistente = id ? db.jogos.find(j => j.id == id) : null;
+            if (id && !jogoExistente) return;
+
             const camp = document.getElementById('jogo-camp').value;
             const cat = document.getElementById('jogo-cat').value;
             const estadioId = document.getElementById('jogo-estadio').value;
@@ -1624,51 +1654,85 @@
             const mandanteObj = db.clubes.find(c => c.id == mandanteId);
             const visitanteObj = db.clubes.find(c => c.id == visitanteId);
 
-            const jogoExistente = id ? db.jogos.find(j => j.id == id) : null;
-
-            const jogoData = {
-                id: id ? Number(id) : Date.now(),
-                campeonato: camp,
-                categoria: cat,
-                mandante: mandanteObj ? mandanteObj.nome : '',
-                logoMandante: mandanteObj ? mandanteObj.logo : '',
-                visitante: visitanteObj ? visitanteObj.nome : '',
-                logoVisitante: visitanteObj ? visitanteObj.logo : '',
-                local: estadioObj ? `${estadioObj.nome} (${estadioObj.cidade})` : '',
-                data, hora, horaApresentacao, localApresentacao, saida, orientacoes,
-                presencas: jogoExistente ? (jogoExistente.presencas || []) : [],
-                manifesto: jogoExistente ? jogoExistente.manifesto : null
-            };
-
-            if (id) {
-                const index = db.jogos.findIndex(j => j.id == id);
-                if (index !== -1) db.jogos[index] = jogoData;
+            if (!id) {
+                db.jogos.push({
+                    id: Date.now(), campeonato: camp, categoria: cat,
+                    mandante: mandanteObj ? mandanteObj.nome : '',
+                    logoMandante: mandanteObj ? mandanteObj.logo : '',
+                    visitante: visitanteObj ? visitanteObj.nome : '',
+                    logoVisitante: visitanteObj ? visitanteObj.logo : '',
+                    local: estadioObj ? `${estadioObj.nome} (${estadioObj.cidade})` : '',
+                    data, hora, horaApresentacao, localApresentacao, saida, orientacoes,
+                    presencas: [], manifesto: null
+                });
             } else {
-                db.jogos.push(jogoData);
+                const index = db.jogos.findIndex(j => j.id == id);
+                if (index !== -1) {
+                    const atual = db.jogos[index];
+                    const original = jogoEmEdicaoOriginal || atual;
+                    const atualizado = { ...atual };
+
+                    if (camp !== original.campeonato) atualizado.campeonato = camp;
+                    if (cat !== original.categoria) atualizado.categoria = cat;
+                    if (data !== original.data) atualizado.data = data;
+                    if (hora !== original.hora) atualizado.hora = hora;
+                    if (horaApresentacao !== (original.horaApresentacao || '')) atualizado.horaApresentacao = horaApresentacao;
+                    if (localApresentacao !== (original.localApresentacao || '')) atualizado.localApresentacao = localApresentacao;
+                    if (saida !== (original.saida || '')) atualizado.saida = saida;
+                    if (orientacoes !== (original.orientacoes || '')) atualizado.orientacoes = orientacoes;
+
+                    if (mandanteObj && mandanteObj.nome !== original.mandante) {
+                        atualizado.mandante = mandanteObj.nome;
+                        atualizado.logoMandante = mandanteObj.logo || '';
+                    }
+                    if (visitanteObj && visitanteObj.nome !== original.visitante) {
+                        atualizado.visitante = visitanteObj.nome;
+                        atualizado.logoVisitante = visitanteObj.logo || '';
+                    }
+
+                    const novoLocal = estadioObj ? `${estadioObj.nome} (${estadioObj.cidade})` : null;
+                    if (novoLocal && novoLocal !== original.local) atualizado.local = novoLocal;
+
+                    db.jogos[index] = atualizado;
+                }
             }
+
             cancelarEdicaoJogo();
             salvarDados();
         }
+
         function editarJogo(id) {
             const item = db.jogos.find(j => j.id == id);
             if(item) {
+                jogoEmEdicaoOriginal = JSON.parse(JSON.stringify(item));
+
                 document.getElementById('jogo-id').value = item.id;
-                document.getElementById('jogo-camp').value = item.campeonato;
-                document.getElementById('jogo-cat').value = item.categoria;
-                document.getElementById('jogo-data').value = item.data;
-                document.getElementById('jogo-hora').value = item.hora;
+                document.getElementById('jogo-camp').value = item.campeonato || '';
+                document.getElementById('jogo-cat').value = item.categoria || '';
+                document.getElementById('jogo-data').value = item.data || '';
+                document.getElementById('jogo-hora').value = item.hora || '';
                 document.getElementById('jogo-hora-apresentacao').value = item.horaApresentacao || '';
                 document.getElementById('jogo-local-apresentacao').value = item.localApresentacao || '';
-                document.getElementById('jogo-saida').value = item.saida;
+                document.getElementById('jogo-saida').value = item.saida || '';
                 document.getElementById('jogo-orientacoes').value = item.orientacoes || '';
-                
+
+                const mandante = db.clubes.find(c => c.nome === item.mandante);
+                const visitante = db.clubes.find(c => c.nome === item.visitante);
+                const estadio = db.estadios.find(es => `${es.nome} (${es.cidade})` === item.local);
+
+                if (mandante) document.getElementById('jogo-mandante').value = mandante.id;
+                if (visitante) document.getElementById('jogo-visitante').value = visitante.id;
+                if (estadio) document.getElementById('jogo-estadio').value = estadio.id;
+
                 document.getElementById('titulo-form-jogo').innerText = "Editar Jogo";
                 document.getElementById('btn-salvar-jogo').innerText = "Atualizar Jogo";
                 document.getElementById('btn-cancelar-jogo').classList.remove('hidden');
                 switchTab('tab-jogos');
             }
         }
+
         function cancelarEdicaoJogo() {
+            jogoEmEdicaoOriginal = null;
             document.getElementById('form-jogo').reset();
             document.getElementById('jogo-id').value = '';
             document.getElementById('titulo-form-jogo').innerHTML = `<i class="custom-text fa-solid fa-calendar-days"></i> Cadastrar Novo Jogo`;
@@ -1714,7 +1778,6 @@
             document.getElementById('cfg-nome-clube').value = config.nomeClube;
             document.getElementById('cfg-cor-tema').value = cor;
 
-            // Ordenar categorias em ordem crescente alfanumérica
             if (db.categorias) {
                 db.categorias.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { numeric: true, sensitivity: 'base' }));
             }
@@ -1746,7 +1809,6 @@
             selectAtletaCat.innerHTML = db.categorias.length ? '' : '<option value="">Sem categoria específica</option>';
             db.categorias.forEach(c => selectAtletaCat.innerHTML += `<option value="${c.nome}">${c.nome}</option>`);
 
-            // Filtro de Categoria em Jogos
             const filtroCatEl = document.getElementById('filtro-jogos-cat');
             const catSelecionadaAtual = filtroCatEl.value;
             filtroCatEl.innerHTML = `<option value="">Todas as Categorias</option>`;
@@ -1754,7 +1816,6 @@
                 filtroCatEl.innerHTML += `<option value="${c.nome}" ${c.nome === catSelecionadaAtual ? 'selected' : ''}>${c.nome}</option>`;
             });
 
-            // Filtro de Categoria na Aba Elenco
             const filtroAtletaCatEl = document.getElementById('filtro-atleta-cat');
             const catAtletaSel = filtroAtletaCatEl.value;
             filtroAtletaCatEl.innerHTML = `<option value="">Todas as Categorias</option>`;
@@ -1821,7 +1882,6 @@
                 </div>
             `).join('') || '<p class="text-zinc-500 text-sm sm:col-span-3">Nenhum estádio cadastrado.</p>';
 
-            // Filtragem e ordenação de membros (Elenco)
             const buscaAtleta = document.getElementById('filtro-atleta-busca').value.toLowerCase();
             const filtroCatAtleta = document.getElementById('filtro-atleta-cat').value;
             const filtroFuncaoAtleta = document.getElementById('filtro-atleta-funcao').value;
@@ -1871,11 +1931,9 @@
                 return true;
             });
 
-            // Jogos - Renderização com Área do Poster Limpa + Lista de Convocados
             document.getElementById('lista-jogos').innerHTML = jogosFiltrados.map(j => {
                 const totalPresencas = (j.presencas || []).length;
                 
-                // Obter atletas convocados
                 const passageirosIds = (j.presencas && j.presencas.length > 0) ? j.presencas : [];
                 let atletasConvidados = db.atletas.filter(a => passageirosIds.includes(a.id) && (a.funcao || 'Atleta') === 'Atleta');
                 atletasConvidados.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
@@ -1883,7 +1941,6 @@
                 return `
                     <div class="rounded-2xl bg-gradient-to-b from-zinc-950 to-zinc-900 border-2 custom-border p-5 shadow-2xl flex flex-col justify-between relative overflow-hidden">
                         
-                        <!-- ÁREA DO POSTER -->
                         <div id="poster-jogo-${j.id}" class="bg-zinc-950 p-4 rounded-xl border border-zinc-800/80">
                             <div class="flex justify-between items-start mb-3">
                                 <span class="custom-badge border text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">${j.campeonato} • ${j.categoria}</span>
@@ -1917,7 +1974,6 @@
                                 </div>
                             ` : ''}
 
-                            <!-- LISTA DE ATLETAS CONVOCADOS INCLUÍDA NO POSTER -->
                             <div class="mt-3 p-3 bg-zinc-900/70 border border-zinc-800 rounded-xl">
                                 <p class="font-bold text-xs text-white mb-2 uppercase tracking-wide flex items-center gap-1.5">
                                     <i class="custom-text fa-solid fa-users"></i> Atletas Convocados (${atletasConvidados.length}):
@@ -1934,7 +1990,6 @@
                             </div>
                         </div>
 
-                        <!-- BOTÕES DE GERENCIAMENTO -->
                         <div class="mt-4 pt-3 border-t border-zinc-800 space-y-2">
                             <div class="flex justify-between items-center">
                                 <div class="flex gap-2">
@@ -1963,6 +2018,10 @@
                     </div>
                 `;
             }).join('') || '<p class="text-zinc-500 text-sm md:col-span-2 text-center py-6">Nenhum jogo encontrado com os filtros selecionados.</p>';
+
+            if (!document.getElementById('tab-agenda').classList.contains('hidden')) {
+                renderizarAgendaMensal();
+            }
         }
     </script>
 </body>
